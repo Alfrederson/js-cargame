@@ -1,4 +1,4 @@
-import { Camera } from "../main"
+import { Camera } from "./Camera"
 
 
 const X = 0
