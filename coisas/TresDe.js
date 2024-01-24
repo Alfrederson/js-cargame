@@ -10,10 +10,13 @@ import {
     PerspectiveCamera,
     BoxGeometry,
     MeshStandardMaterial,
+    Object3D
 } from 'three'
-import { 
+import {
     GLTFLoader 
-} from 'three/addons/loaders/GLTFLoader.js';
+} from 'three/addons/loaders/GLTFLoader';
+
+import carro_mesh from './carro_mesh';
 
 
 let cena = {
@@ -30,11 +33,17 @@ let cena = {
     scene : undefined
 }
 
+/** @type {GLTFLoader} */
+const loader = new GLTFLoader()
+
 /**
  * 
  * @param {HTMLCanvasElement} element 
  */
 function init3D(element){
+
+    console.log(carro_mesh)
+
     const rect = element.getClientRects().item(0)
     cena.renderer = new WebGLRenderer({
         alpha: true,
@@ -59,7 +68,7 @@ function init3D(element){
     document.body.appendChild( r )
 
     cena.scene = new Scene()
-    const directionalLight = new DirectionalLight( 0xffffff, 0.5 );
+    const directionalLight = new DirectionalLight( 0xffffff, 1 );
     
     directionalLight.position.z = 3
     directionalLight.position.x = 4
@@ -78,7 +87,13 @@ function init3D(element){
     const geometry = new BoxGeometry( 1, 0.4, 0.4)
     const material = new MeshStandardMaterial({ color : 0x00FF00 , wireframe: false})
 
-    cena.carro = new Mesh( geometry, material )
+    loader.parse(carro_mesh,"", function({scene,scenes,cameras,animations,asset}){
+        scene.rotation.y = Math.PI*0.5
+        scene.scale.set(0.5,0.5,0.5)
+        cena.carro.add(scene)
+    })
+
+    cena.carro = new Object3D() // new Mesh( geometry, material )
     cena.scene.add( cena.carro )
 
     cena.camera.position.z = 3
