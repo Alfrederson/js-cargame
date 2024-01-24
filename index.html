@@ -4,9 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uno Com Escada Simulator 95</title>
+    <style>
+        body{
+            width: 100vw;
+            height: 100svh;
+            overflow:hidden;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            margin: 0;
+        }
+        #myCanvas{
+            height: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            image-rendering: pixelated;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="myCanvas" width="600" height="600" style="border:1px solid #000;"></canvas>
+    <canvas id="myCanvas" width="600" height="600" ></canvas>
     <script src="./main.js" type="module"></script>
 </body>
 </html>

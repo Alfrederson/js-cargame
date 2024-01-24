@@ -134,8 +134,12 @@ class Carro {
             cfg.halfWidth * 2
         )
         ctx.restore()
+
+        ctx.save()
         ctx.fillStyle = "black"
-        ctx.fillText(`${this.absVel*3.6}km/h`,20,80)        
+        ctx.font = "48px serif"
+        ctx.fillText(`${(this.absVel*3.6).toFixed(2)}km/h`,20,80)        
+        ctx.restore()
     }
 
     /**

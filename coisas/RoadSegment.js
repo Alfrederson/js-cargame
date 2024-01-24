@@ -22,6 +22,28 @@ class RoadSegment{
     waypoints = []
   
     clockwise = true
+
+    generateVertices(){
+      const vertexCount = Math.max(2, (this.length / EDGE_LENGTH)|0)
+      const angleIncrement = this.to / vertexCount
+      // vai fazendo o lado esquerdo
+      const [x,y] = this.center
+      for(let i = 0; i <= vertexCount; i++){
+        this.vertices.push([
+          x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2),
+          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2)
+        ])
+      }
+
+      // this.vertices.push( this.endPointRight )
+      // fazendo o lado direito...
+      for(let i = vertexCount; i >= 0; i--){
+        this.vertices.push([
+          x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2),
+          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2)
+        ])
+      }
+    }
   
     generateWaypoints(){
       const waypointCount = Math.max(2, (this.length / WAYPOINT_SPACING)|0)
@@ -29,7 +51,6 @@ class RoadSegment{
       this.waypoints.push( this.startPoint)
       const [x,y] = this.center
       for(let i = 1; i < waypointCount; i++){
-        console.log( "mais um")
         this.waypoints.push([
           x + Math.cos( (this.from + angleIncrement * i) * Math.PI ) * this.radius,
           y + Math.sin( (this.from + angleIncrement * i) * Math.PI ) * this.radius
@@ -63,6 +84,8 @@ class RoadSegment{
   
       // calcula os waypoints
       this.generateWaypoints()
+      // calcula os vértices
+      this.generateVertices()
   
       // calcula os pontos do aabb
       this.aabb = this.getAABB()
@@ -91,7 +114,13 @@ class RoadSegment{
         y + (this.radius-this.width/2) * Math.sin((this.from + this.to)*Math.PI)
       ]
     }
-  
+    get startPointRight(){
+      const [x,y] = this.center
+      return [
+        x + (this.radius-this.width/2) * Math.cos((this.from)*Math.PI),
+        y + (this.radius-this.width/2) * Math.sin((this.from)*Math.PI)
+      ]
+    }
     get startPoint(){
       const [centerX, centerY] = this.center
       const startPointX = centerX + (this.radius) * Math.cos((this.from)*Math.PI)
@@ -109,13 +138,7 @@ class RoadSegment{
         y + (this.radius+this.width/2) * Math.sin((this.from)*Math.PI)
       ]
     }
-    get startPointRight(){
-      const [x,y] = this.center
-      return [
-        x + (this.radius-this.width/2) * Math.cos((this.from)*Math.PI),
-        y + (this.radius-this.width/2) * Math.sin((this.from)*Math.PI)
-      ]
-    }
+
   
     getAABB(){
       const points = [
@@ -210,7 +233,33 @@ class RoadSegment{
       this.next = result
       return result
     }
+
+    drawAsphalt(ctx,camera){
+      ctx.save()
+      ctx.beginPath()
+
+      if(this.clockwise){
+        ctx.fillStyle = "#555555"
+      }else{
+        ctx.fillStyle = "#646464"
+      }
+      
+      ctx.moveTo(...camera.translate(this.vertices[0]))
+      const vertexCount = this.vertices.length
+      for(let i = 1; i < vertexCount; i++){
+         ctx.lineTo( ...camera.translate( this.vertices[i] ))
+      }
+
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
+
     draw(ctx, camera){
+
+      this.drawAsphalt(ctx, camera)
+
+      return
       const [centerX, centerY] = this.center
       const angleIncrement = (this.to*Math.PI)/this.segments;
       const fromAngle = this.from*Math.PI;

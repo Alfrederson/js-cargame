@@ -30,43 +30,55 @@ const camera = new Camera()
 // ].reverse()
 
 const parts = []
-
-for(let i = 0; i < 60; i ++){
+for(let i = 0; i < 7; i ++){
   parts.push({
     radius : (2 + (Math.random()*10)|0)*20,
-    to : (Math.random()-0.5)
+    to : (Math.random()-0.5)*0.4
   })
 }
 
-
-
-
-
+/** @type {RoadSegment} */
 let road
+/** @type {RoadSegment} */
 let targetSegment
-let currentWaypoint = 0
+/** @type {RoadSegment} */
+let lastSegment, firstSegment
 
+let currentWaypoint = 0
+let startingPosition = {
+  pos : [0,0],
+  angle : 0
+}
 function initRoad(){
   road = new RoadSegment({
     center: [0,0],
-    radius: 50,
+    radius: 30,
     from  : 0,
     to    : -0.5,
     width : 10
   })
+
+  firstSegment = road
 
   let segment = road
   let i = 0
   while( parts.length > 0){
     i++
     segment = segment.continue( parts.pop() )
+    // o quarto pedacinho é o que vai fazer a estrada crescer
+    // quando a gente chegar nele.
     if(i==1){
+      startingPosition.pos = segment.startPoint
+      startingPosition.angle = segment.clockwise ? (segment.from+0.5) * Math.PI : (segment.from-0.5) * Math.PI
+    }
+    if(i==5){
       targetSegment=segment
     }
   }
+  lastSegment = segment
   
-  ;[camera.x, camera.y] = road.startPoint
-  targetSegment = road
+  ;[camera.x, camera.y] = road.endPoint
+
   currentWaypoint = 0
 }
 
@@ -107,6 +119,7 @@ const mouse = {
 }
 
 const canvas = document.getElementById("myCanvas");
+/** @type {CanvasRenderingContext2D} */
 const ctx = canvas.getContext("2d");
 
 ctx.font = "14px serif";
@@ -114,7 +127,8 @@ ctx.font = "14px serif";
 let carro
 
 function tick(){
-  ctx.clearRect(0,0,600, 600)
+  ctx.fillStyle = "#CFFDBC"
+  ctx.fillRect(0,0,600,600)
 
   if(mouse.button[0]){
     camera.x += mouse.speedX
@@ -155,19 +169,43 @@ function tick(){
   camera.x += dX * 0.2
   camera.y += dY * 0.2
 
+  camera.zoom = (1 - carro.absVel / 100 )*20 + 5
   
   carro.update(1000/60/1000)
 
-  carro.draw(ctx, camera)
+  // faz a pista crescer
+  let endPoint = targetSegment.endPoint
+  dX = endPoint[0] - carro.position[0]
+  dY = endPoint[1] - carro.position[1]
 
+
+  
+  if(Math.sqrt( dX*dX + dY*dY) <= road.width*1.2){
+    // tira um do começo
+    road = road.next
+    targetSegment = targetSegment.next
+
+    // põe mais um no fim
+    lastSegment = lastSegment.continue({
+      radius : (2 + (Math.random()*10)|0)*20,
+      to : (Math.random()-0.5)
+    })
+
+
+  }
+
+  carro.draw(ctx, camera)
+  ctx.moveTo( ...camera.translate(carro.position))
+  ctx.lineTo( ...camera.translate(targetSegment.endPoint))
+  ctx.stroke()
   requestAnimationFrame( tick )
 }
 
 document.addEventListener("DOMContentLoaded", function () {
     carro = new Carro({})
     initRoad()
-    carro.position = road.startPoint
-    carro.heading = -0.5 * Math.PI
+    carro.position = startingPosition.pos
+    carro.heading = startingPosition.angle 
     tick()
 });
 
