@@ -18,7 +18,13 @@ const game = {
   /** @type { RoadSegment? } */
   lastSegment: undefined,
   /** @type { RoadSegment? } */
-  firstSegment: undefined
+  firstSegment: undefined,
+  /** @type { CanvasRenderingContext2D? } */
+  ctx: undefined,
+  /** @type { HTMLCanvasElement? } */
+  canvas: undefined,
+
+  gasolina : 50
 }
 
 const parts = []
@@ -28,9 +34,6 @@ for(let i = 0; i < 7; i ++){
     to : (Math.random()-0.5)*0.4
   })
 }
-
-
-
 let startingPosition = {
   pos : [0,0],
   angle : 0
@@ -70,8 +73,6 @@ function initGame(){
 
 }
 
-let velocidade = 0
-let steer = 0
 function drawRoad(ctx){
 
   let segment = game.road
@@ -103,16 +104,61 @@ const mouse = {
   button : []
 }
 
-const canvas = document.getElementById("myCanvas");
-/** @type {CanvasRenderingContext2D} */
-const ctx = canvas.getContext("2d");
 
-ctx.font = "14px serif";
+// o marcador vai até quanto?
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} velocidade 
+ */
+function velocimetro(ctx, x,y, velocidade){
+  const max = 160
+  let porcentagem = Math.min(1,velocidade/max)
+  let angulo = (0.8+porcentagem* 1.4)  * Math.PI
 
+  ctx.save()
+  ctx.font = "16px monospace"
+  ctx.fillStyle = "black"
+  ctx.textBaseline = "top"
+  ctx.textAlign = "center"
+  ctx.fillText(
+    "0",
+    x + Math.cos( (0.8+0*1.4)*Math.PI  )* 30,
+    y + Math.sin( (0.8+0*1.4)*Math.PI  )* 30,
+  )
+  ctx.fillText(
+    max,
+    x + Math.cos( (0.8+1*1.4)*Math.PI  )* 30,
+    y + Math.sin( (0.8+1*1.4)*Math.PI  )* 30,
+  )
+  ctx.restore()
+
+  ctx.moveTo(x,y)
+  ctx.strokeStyle="red"
+  ctx.lineTo( x + Math.cos(angulo) * 30, y + Math.sin(angulo) * 30 )
+  ctx.stroke()
+}
+
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} gasolina 
+ */
+function medidorDeGasolina(ctx, x,y, gasolina){
+  ctx.save()
+
+  ctx.fillText(gasolina.toFixed(2), x,y)
+
+  ctx.restore()
+}
 
 function tick(){
-  ctx.fillStyle = "#CFFDBC"
-  ctx.fillRect(0,0,600,600)
+  const ctx = game.ctx
+  ctx.clearRect(0,0,600,600)
 
   const {camera,carro, road, targetSegment} = game
 
@@ -129,26 +175,40 @@ function tick(){
   if(keyboard.w){
     carro.input.throttle = 1
   } else if(keyboard.s){
-    carro.input.throttle = 0
-    carro.input.brake = 1
+    // se tá acelerando, freia.
+    //carro.input.reverse = 1
+    carro.input.brake = 1    
   } else{
     carro.input.throttle = 0
     carro.input.brake = 0
+    //carro.input.reverse = 0
   }
 
-  // faz a camerinha seguir os waypoints
+
+  // gasolina.
+  if(game.gasolina <= 0){
+    carro.input.throttle = 0
+    carro.input.reverse = 0
+    game.gasolina = 0
+  }
+
+  game.gasolina -= 0.05 * carro.input.throttle
+
+  // freio de mão.
+  carro.input.eBrake = keyboard.m ? 1 : 0
+
   drawRoad(ctx)
 
-  ctx.fillText( `${mouse.x} ${mouse.y}`, 20,20)
   camera.lookAt( carro.position )
-  camera.zoom = (1 - carro.absVel / 100 )*20 + 5
+  camera.zoom = (-carro.absVel / 100 )*10 + 10
   carro.update(1000/60/1000)
 
   // faz a pista crescer
   let endPoint = targetSegment.endPoint
   const dX = endPoint[0] - carro.position[0]
   const dY = endPoint[1] - carro.position[1]
-  if(Math.sqrt( dX*dX + dY*dY) <= game.road.width*1.2){
+  const distToTarget = Math.sqrt( dX*dX + dY*dY)
+  if(distToTarget <= game.road.width*0.5){
     // tira um do começo
     game.road = road.next
     game.targetSegment = game.targetSegment.next
@@ -158,12 +218,28 @@ function tick(){
       radius : (2 + (Math.random()*10)|0)*20,
       to : (Math.random()-0.5)
     })
+
+    // aumenta a gasolina
+    game.gasolina = Math.min(50, game.gasolina + 30)
   }
 
   // carro.draw(ctx, camera)
-  ctx.moveTo( ...camera.translate(carro.position))
-  ctx.lineTo( ...camera.translate(targetSegment.endPoint))
-  ctx.stroke()
+
+  ctx.fillText( "⛽", ...camera.translate(targetSegment.endPoint ))
+
+  if(distToTarget > 20){
+    let angulo = Math.atan2( dY, dX )
+    ctx.save()
+    let palhacoX =SCREEN_WIDTH/2 + Math.cos(angulo)*50
+    let palhacoY =SCREEN_HEIGHT/2 + Math.sin(angulo)*50
+    ctx.fillText("🤡", palhacoX|0, palhacoY|0 )    
+    
+    ctx.translate(palhacoX*1.1|0,palhacoY*1.1|0)
+    ctx.rotate( angulo )
+    ctx.fillText("👉",0,0)
+
+    ctx.restore()    
+  }
 
   // gira o 3D lá.
   girarCarro(carro.heading)
@@ -171,41 +247,55 @@ function tick(){
   setZoom(camera.zoom)
   renderizar3D()
 
+  velocimetro(ctx, 40, SCREEN_HEIGHT-60, carro.absVel * 3.6)
+  medidorDeGasolina(ctx, 80, SCREEN_HEIGHT-60, game.gasolina)
   requestAnimationFrame( tick )
 }
 
 document.addEventListener("DOMContentLoaded", function (event) {
+    game.canvas = document.getElementById("myCanvas");
+
+    game.canvas.width = SCREEN_WIDTH
+    game.canvas.height = SCREEN_HEIGHT
+    /** @type {CanvasRenderingContext2D} */
+    game.ctx = game.canvas.getContext("2d");
+    
+    game.ctx.font = "14px serif";
+
+    initInput()
     initGame()
-    init3D(canvas)
+    init3D(game.canvas)
     game.carro.position = startingPosition.pos
     game.carro.heading = startingPosition.angle 
     tick()
 });
 
-canvas.addEventListener("mousemove", function(/** @type {MouseEvent} */ event ){
-  const rect = canvas.getBoundingClientRect();
-  mouse.oldX = mouse.x
-  mouse.oldY = mouse.y
-
-  mouse.x = event.clientX - rect.left;
-  mouse.y = event.clientY - rect.top;
-
-  mouse.speedX = mouse.x - mouse.oldX
-  mouse.speedY = mouse.y - mouse.oldY
-})
-
-canvas.addEventListener("mousedown", function (/** @type {MouseEvent} */ event){
-  mouse.button[ event.button ] = true
-})
-canvas.addEventListener("mouseup", function (/** @type {MouseEvent} */ event){
-  mouse.button[ event.button ] = false
-})
-
-document.addEventListener("keydown",event =>{
-  keyboard[ event.key ] = true
-})
-document.addEventListener("keyup",event =>{
-  keyboard[ event.key ] = false
-})
+function initInput(){
+  game.canvas.addEventListener("mousemove", function(/** @type {MouseEvent} */ event ){
+    const rect = game.canvas.getBoundingClientRect();
+    mouse.oldX = mouse.x
+    mouse.oldY = mouse.y
+  
+    mouse.x = event.clientX - rect.left;
+    mouse.y = event.clientY - rect.top;
+  
+    mouse.speedX = mouse.x - mouse.oldX
+    mouse.speedY = mouse.y - mouse.oldY
+  })
+  
+  game.canvas.addEventListener("mousedown", function (/** @type {MouseEvent} */ event){
+    mouse.button[ event.button ] = true
+  })
+  game.canvas.addEventListener("mouseup", function (/** @type {MouseEvent} */ event){
+    mouse.button[ event.button ] = false
+  })
+  
+  document.addEventListener("keydown",event =>{
+    keyboard[ event.key ] = true
+  })
+  document.addEventListener("keyup",event =>{
+    keyboard[ event.key ] = false
+  })  
+}
 
 export { Camera }

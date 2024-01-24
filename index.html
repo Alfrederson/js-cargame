@@ -10,14 +10,24 @@
             height: 100svh;
             overflow:hidden;
             display: flex;
-            align-items: center;
             padding: 0;
             margin: 0;
+            font-family: monospace;
+            font-size: 16px;
+            align-items: center;
+        }
+        .porta-canvas{
+            height:100%;
+            margin-left: auto;
+            margin-right:auto;
+        }
+        .porta-texto{
+            position: fixed;
+            z-index: -1;
         }
         #myCanvas{
+            background-color: none;
             height: 100%;
-            margin-left: auto;
-            margin-right: auto;
             image-rendering: pixelated;
         }
         .tresDe{
@@ -26,13 +36,22 @@
             margin-right:auto;
             position: absolute;
             image-rendering: pixelated;
-            border: 2px solid red;
         }
     </style>
     <script src="./main.js" type="module"></script>
 </head>
-    <body>
-        <canvas id="myCanvas" width="600" height="600" ></canvas>
-        
+    <body>            
+        <div class="porta-canvas">
+            <div class="porta-texto">
+                <ul>
+                    <li>w : acelerar/gas</li>
+                    <li>s : freiar/brake</li>
+                    <li>a : esquerda/left</li>
+                    <li>d : direita/right</li>
+                </ul>    
+                <p>Se você parar, o carro explode.<br/>Se você não seguir o percurso, o carro explode.</p>
+            </div>            
+            <canvas id="myCanvas" width="600" height="600" ></canvas>
+        </div>
     </body>
 </html>

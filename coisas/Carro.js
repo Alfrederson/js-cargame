@@ -53,6 +53,7 @@ class CarroControles{
     brake = 0
     left = 0
     right = 0
+    reverse = 0
 }
 
 /**
@@ -134,12 +135,6 @@ class Carro {
             cfg.halfWidth * 2
         )
         ctx.restore()
-
-        ctx.save()
-        ctx.fillStyle = "black"
-        ctx.font = "48px serif"
-        ctx.fillText(`${(this.absVel*3.6).toFixed(2)}km/h`,20,80)        
-        ctx.restore()
     }
 
     /**
@@ -207,7 +202,7 @@ class Carro {
         // aceleração e freio dos controles
         const
             brake = Math.min( this.input.brake * cfg.brakeForce + this.input.eBrake * cfg.eBrakeForce, cfg.brakeForce),
-            throttle = this.input.throttle * cfg.engineForce
+            throttle = this.input.throttle * cfg.engineForce - this.input.reverse * cfg.engineForce
         
         // força resultante em sistema local.
         // diz o spacejack que essa física é só pra tração traseira.
