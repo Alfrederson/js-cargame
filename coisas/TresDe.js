@@ -143,9 +143,8 @@ function init3D(element){
         alpha: true,
         antialias: false,
     })
-    
-    cena.renderer.setSize( rect.width, rect.height )
-    cena.renderer.setPixelRatio(window.devicePixelRatio * 0.25)
+    cena.renderer.setSize( element.width, element.height )
+    cena.renderer.setPixelRatio(window.devicePixelRatio)
     let r = cena.renderer.domElement
 
     r.className = "tresDe"

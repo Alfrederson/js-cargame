@@ -1,5 +1,15 @@
 
-import { SCREEN_WIDTH, SCREEN_HEIGHT, setScreeSize } from "./config.js"
+import {
+  SCREEN_WIDTH,
+  SCREEN_HEIGHT,
+  VIRTUAL_SCREEN_WIDTH,
+  VIRTUAL_SCREEN_HEIGHT,
+  GAME_MAX_SPEED,
+  GAME_GASOLINA_INICIAL
+} from "./config.js"
+
+import * as ui from "./coisas/Ui.js"
+
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
@@ -25,7 +35,7 @@ const game = {
 
   valendo : false,
   framesAteValer : 60,
-  gasolina : 50,
+  gasolina : GAME_GASOLINA_INICIAL,
   framesParado : 0,
   carroExplodiu : false,
   velocidadeAlvo : 3,
@@ -34,9 +44,11 @@ const game = {
     this.velocidadeAlvo = 3
     this.valendo = false
     this.framesAteValer = 60
-    this.gasolina = 50
+    this.gasolina = GAME_GASOLINA_INICIAL
     this.framesParado = 0
     this.carroExplodiu = false
+
+    this.camera.zoom = 10
   }
 }
 
@@ -53,11 +65,9 @@ function estradaInicial(){
 
 function initGame(){
   resetarCarro()
-  game.reset()
-  
   game.carro = new Carro({})
   game.camera = new Camera(SCREEN_WIDTH,SCREEN_HEIGHT)
-
+  game.reset()
   game.firstSegment = game.road = new RoadSegment({
     center: [0,0],
     radius: 30,
@@ -87,19 +97,20 @@ function initGame(){
   game.camera.setPos( game.road.endPoint )
 }
 
-function drawRoad(ctx){
-
-  game.road.draw(ctx, game.camera)
-  
-  ctx.fillStyle = 'lime'
-
-  ctx.beginPath()
-  ctx.moveTo(SCREEN_WIDTH/2,SCREEN_HEIGHT/2)
-  ctx.stroke()
+const keyboard = {
+  _holding : {},
+  hit(key){
+    if(this[key] && !this._holding[key]){
+      this._holding[key] = true
+      return true
+    }else{
+      if(!this[key]){
+        this._holding[key] = false
+      }
+      return false
+    }
+  }
 }
-
-
-const keyboard = {}
 
 // tirar isso.
 const mouse = {
@@ -127,7 +138,7 @@ const mouse = {
 function velocimetro(ctx, x,y, velocidade){
   velocidade *= 3.6
 
-  const max = 160
+  const max = GAME_MAX_SPEED
   
   let porcentagem = Math.min(1,velocidade/max)
 
@@ -170,22 +181,7 @@ function velocimetro(ctx, x,y, velocidade){
   ctx.stroke()
 }
 
-/**
- * 
- * @param {CanvasRenderingContext2D} ctx 
- * @param {number} x 
- * @param {number} y 
- * @param {number} gasolina 
- */
-function medidorDeGasolina(ctx, x,y, gasolina){
-  ctx.save()
-  ctx.fillStyle = "#000000"
-  ctx.fillRect(x-1,y,10,33)
-  ctx.fillStyle = "#FF0000"
-  ctx.fillRect(x,y+((1-gasolina/50)*32)|0,8,((gasolina/50)*32)|0)
-  ctx.fillText("⛽",x+5,y+31)
-  ctx.restore()
-}
+
 
 
 /**
@@ -213,33 +209,11 @@ function tick(){
 
   const {camera,carro, road, targetSegment} = game
 
-  if(keyboard.e){
-    if(a==0){
-      a=1
-      explodirCarro()
-    }
-  }else{
-    a=0
+  if(keyboard.hit("r")){
+    initGame()
   }
-  if(keyboard.r){
-    if(b==0){
-      b=1
-      initGame()
-    }
-  }else{
-    b=0
-  }
-
-  if(keyboard.a){
-    carro.input.left = 1
-  }else{
-    carro.input.left = 0
-  }
-  if(keyboard.d){
-    carro.input.right = 1
-  }else{
-    carro.input.right = 0
-  }
+  carro.input.left = keyboard.a ? 1 : 0
+  carro.input.right = keyboard.d ? 1 : 0
   if(keyboard.w){
     carro.input.throttle = 1
   } else if(keyboard.s){
@@ -252,7 +226,7 @@ function tick(){
     //carro.input.reverse = 0
   }
 
-
+  game.gasolina -= 0.08 * carro.input.throttle
   // gasolina.
   if(game.gasolina <= 0){
     carro.input.throttle = 0
@@ -260,23 +234,16 @@ function tick(){
     game.gasolina = 0
   }
 
-
-  game.gasolina -= 0.08 * carro.input.throttle
-
   // freio de mão.
   carro.input.eBrake = keyboard.m ? 1 : 0
-
-
-  drawRoad(ctx)
-
+  
   camera.lookAt( carro.position )
   camera.zoom = (-carro.absVel / 100 )*10 + 10
   
   // carro explodiu
   if(!game.carroExplodiu){
-    carro.update(1000/60/1000)
+    carro.update(0.016) // 1 frame em segundos
   }
-  
 
   // faz a pista crescer
   let endPoint = targetSegment.endPoint
@@ -295,22 +262,21 @@ function tick(){
     })
 
     // aumenta a gasolina
-    game.gasolina = Math.min(50, game.gasolina + 30)
+    game.gasolina = Math.min(GAME_GASOLINA_INICIAL, game.gasolina + 30)
   }
 
+  game.road.draw(ctx, game.camera)
   // carro.draw(ctx, camera)
 
   ctx.fillText( "⛽", ...camera.translate(targetSegment.endPoint ))
   if(distToTarget > 20){
     let angulo = Math.atan2( dY, dX )
-    
-    let palhacoX =SCREEN_WIDTH/2 + Math.cos(angulo)*50
-    let palhacoY =SCREEN_HEIGHT/2 + Math.sin(angulo)*50
-
-    indicadorPalhaco(ctx, palhacoX, palhacoY, angulo ) 
+    indicadorPalhaco(ctx,
+      SCREEN_WIDTH/2 + Math.cos(angulo)*50,
+      SCREEN_HEIGHT/2 + Math.sin(angulo)*50,
+      angulo
+    ) 
   }
-
-
 
   if(game.valendo){
     if(!game.carroExplodiu){
@@ -324,7 +290,6 @@ function tick(){
         if(game.velocidadeAlvo < 30){
           game.velocidadeAlvo += carro.absVel * 0.0001
         }
-
         game.framesParado--
         if(game.framesParado<0)
           game.framesParado = 0
@@ -343,7 +308,7 @@ function tick(){
         ctx.translate(SCREEN_WIDTH/2,SCREEN_HEIGHT/2-60)
         ctx.textAlign="center"
         ctx.textBaseline="middle"
-        ctx.scale(1 + Math.cos(frames*0.1)*0.2,1+ Math.cos(frames*0.1)*0.2)
+        ctx.scale(1 + Math.cos(frames*0.2)*0.2,1+ Math.cos(frames*0.2)*0.2)
           ctx.fillText(
              "💣 "+segundos ,
             0,
@@ -365,21 +330,20 @@ function tick(){
   renderizar3D()
 
   velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel)
-  medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
+  ui.medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
 
   requestAnimationFrame( tick )
 }
 
+// A gente tem que dar um jeito de deixar isso bonito no celular também.
 document.addEventListener("DOMContentLoaded", function (event) {
     game.canvas = document.getElementById("myCanvas");
 
     game.canvas.width = SCREEN_WIDTH
     game.canvas.height = SCREEN_HEIGHT
 
-
     /** @type {CanvasRenderingContext2D} */
     game.ctx = game.canvas.getContext("2d");
-    
     game.ctx.font = "14px serif";
 
     init3D(game.canvas)
@@ -431,7 +395,6 @@ function initInput(){
     keyboard.d = false
     keyboard.s = false
   })
-  
   document.addEventListener("keydown",event =>{
     keyboard[ event.key ] = true
   })
