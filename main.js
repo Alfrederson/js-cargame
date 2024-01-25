@@ -1,10 +1,10 @@
 
-import { SCREEN_WIDTH, SCREEN_HEIGHT } from "./config.js"
+import { SCREEN_WIDTH, SCREEN_HEIGHT, setScreeSize } from "./config.js"
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
 import { init3D,renderizar3D, girarCarro, setZoom } from "./coisas/TresDe.js"
-
+import { TorusKnotGeometry } from "three"
 
 const game = {
   /** @type { Camera? } */
@@ -39,7 +39,6 @@ let startingPosition = {
   angle : 0
 }
 function initGame(){
-
   game.carro = new Carro({})
   game.camera = new Camera(SCREEN_WIDTH,SCREEN_HEIGHT)
 
@@ -67,10 +66,8 @@ function initGame(){
     }
   }
   game.lastSegment = segment
-
   game.camera.setPos( game.road.endPoint )
   
-
 }
 
 function drawRoad(ctx){
@@ -150,15 +147,19 @@ function velocimetro(ctx, x,y, velocidade){
  */
 function medidorDeGasolina(ctx, x,y, gasolina){
   ctx.save()
-
-  ctx.fillText(gasolina.toFixed(2), x,y)
-
+  ctx.fillStyle = "#000000"
+  ctx.fillRect(x-1,y,10,33)
+  ctx.fillStyle = "#FF0000"
+  ctx.fillRect(x,y+((1-gasolina/50)*32)|0,8,((gasolina/50)*32)|0)
+  ctx.fillText("⛽",x+5,y+31)
   ctx.restore()
 }
 
+let a=0,b=0,g=0
+let frames = 0
 function tick(){
   const ctx = game.ctx
-  ctx.clearRect(0,0,600,600)
+  ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
   const {camera,carro, road, targetSegment} = game
 
@@ -192,7 +193,7 @@ function tick(){
     game.gasolina = 0
   }
 
-  game.gasolina -= 0.05 * carro.input.throttle
+  game.gasolina -= 0.08 * carro.input.throttle
 
   // freio de mão.
   carro.input.eBrake = keyboard.m ? 1 : 0
@@ -241,14 +242,29 @@ function tick(){
     ctx.restore()    
   }
 
+  //ctx.font = "20px serif"
+  frames++
+  ctx.save()
+  ctx.translate(120,SCREEN_HEIGHT-14)
+  ctx.textAlign="center"
+  ctx.textBaseline="middle"
+  ctx.scale(1 + Math.cos(frames*0.1)*0.2,1+ Math.cos(frames*0.1)*0.2)
+    ctx.fillText(
+       "💣" ,
+      0,
+      0 
+    )
+  ctx.restore()
+
   // gira o 3D lá.
   girarCarro(carro.heading)
   // zoom
   setZoom(camera.zoom)
   renderizar3D()
 
-  velocimetro(ctx, 40, SCREEN_HEIGHT-60, carro.absVel * 3.6)
-  medidorDeGasolina(ctx, 80, SCREEN_HEIGHT-60, game.gasolina)
+  velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel * 3.6)
+  medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
+
   requestAnimationFrame( tick )
 }
 
@@ -257,6 +273,8 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
     game.canvas.width = SCREEN_WIDTH
     game.canvas.height = SCREEN_HEIGHT
+
+
     /** @type {CanvasRenderingContext2D} */
     game.ctx = game.canvas.getContext("2d");
     
@@ -282,12 +300,36 @@ function initInput(){
     mouse.speedX = mouse.x - mouse.oldX
     mouse.speedY = mouse.y - mouse.oldY
   })
-  
-  game.canvas.addEventListener("mousedown", function (/** @type {MouseEvent} */ event){
-    mouse.button[ event.button ] = true
+
+  let touchX
+  let oldTouchX
+  document.addEventListener("touchstart", function(event){
+    oldTouchX = touchX = event.touches[0].clientX
+    keyboard.w = true
   })
-  game.canvas.addEventListener("mouseup", function (/** @type {MouseEvent} */ event){
-    mouse.button[ event.button ] = false
+  document.addEventListener("touchmove", function(event){
+    event.preventDefault()
+    oldTouchX = touchX
+    touchX = event.touches[0].clientX
+    a = touchX - oldTouchX
+    if(Math.abs(touchX - oldTouchX) > 0.5){
+      if(touchX > oldTouchX){
+        keyboard.d = true
+        keyboard.a = false
+      }else{
+        keyboard.a = true
+        keyboard.d = false
+      }  
+    }else{
+      keyboard.a = false
+      keyboard.d = false
+    }
+  })
+  document.addEventListener("touchend", function(event){
+    keyboard.w = false
+    keyboard.a = false
+    keyboard.d = false
+    keyboard.s = false
   })
   
   document.addEventListener("keydown",event =>{

@@ -6,6 +6,8 @@ import {
     WebGLRenderer,
     Scene,
     DirectionalLight,
+    SpotLight,
+    AmbientLight,
     Vector3,
     PerspectiveCamera,
     BoxGeometry,
@@ -17,6 +19,7 @@ import {
 } from 'three/addons/loaders/GLTFLoader';
 
 import carro_mesh from './carro_mesh';
+import { PointLight } from 'three'
 
 
 let cena = {
@@ -42,9 +45,7 @@ const loader = new GLTFLoader()
  */
 function init3D(element){
 
-    console.log(carro_mesh)
-
-    const rect = element.getClientRects().item(0)
+    const rect = element.getBoundingClientRect()
     cena.renderer = new WebGLRenderer({
         alpha: true,
         antialias: false,
@@ -57,6 +58,8 @@ function init3D(element){
     r.className = "tresDe"
     r.style.left = rect.left + "px"
     r.style.top = rect.top + "px"
+    r.style.width = rect.width + "px"
+    r.style.height = rect.height + "Px"
 
     window.addEventListener("resize", event=>{
         const rect = element.getBoundingClientRect()
@@ -65,9 +68,13 @@ function init3D(element){
         r.style.width = rect.width + "px"
         r.style.height = rect.height + "Px"
     })
+
     document.body.appendChild( r )
 
     cena.scene = new Scene()
+    cena.scene.add(
+        new AmbientLight(0xFFFFFF,0.5)
+    )
     const directionalLight = new DirectionalLight( 0xffffff, 1 );
     
     directionalLight.position.z = 3
@@ -75,7 +82,9 @@ function init3D(element){
     directionalLight.position.y = 10
     directionalLight.lookAt(new Vector3(0,0,0))
 
-    cena.scene.add( directionalLight );
+    if(!/Android/i.test(navigator.userAgent)){
+        cena.scene.add( directionalLight );
+    }
 
     cena.camera = new PerspectiveCamera(
         75,
@@ -87,13 +96,13 @@ function init3D(element){
     const geometry = new BoxGeometry( 1, 0.4, 0.4)
     const material = new MeshStandardMaterial({ color : 0x00FF00 , wireframe: false})
 
-    loader.parse(carro_mesh,"", function({scene,scenes,cameras,animations,asset}){
+    loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
         scene.rotation.y = Math.PI*0.5
         scene.scale.set(0.5,0.5,0.5)
         cena.carro.add(scene)
     })
 
-    cena.carro = new Object3D() // new Mesh( geometry, material )
+    cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
 
     cena.camera.position.z = 3
@@ -103,7 +112,7 @@ function init3D(element){
 
 // como o carro vai ser só um mesh "estático", isso é aceitável.
 function girarCarro( angulo ){
-    cena.carro.rotation.y = -(((angulo*10)|0)/10)
+    cena.carro.rotation.y = -(((angulo*16)|0)/16)
 }
 
 function resetarCarro(){

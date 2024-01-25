@@ -24,18 +24,6 @@ export default `{
 	],
 	"materials":[
 		{
-			"extensions":{
-				"KHR_materials_specular":{
-					"specularColorFactor":[
-						2.371357614441398,
-						2.371357614441398,
-						2.371357614441398
-					]
-				},
-				"KHR_materials_ior":{
-					"ior":1.4500000476837158
-				}
-			},
 			"name":"Material",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

@@ -153,12 +153,6 @@ class Carro {
         this.axleWeightRatioRear = this.config.cgToFrontAxle / this.wheelBase
 
         let cfg = this.config
-        console.log(            
-            -cfg.cgToRear,
-            -cfg.halfWidth,
-            cfg.cgToFront + cfg.cgToRear,
-            cfg.halfWidth * 2
-        )
     }
 
     /**
