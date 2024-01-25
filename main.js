@@ -3,8 +3,7 @@ import { SCREEN_WIDTH, SCREEN_HEIGHT, setScreeSize } from "./config.js"
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
-import { init3D,renderizar3D, girarCarro, setZoom } from "./coisas/TresDe.js"
-import { TorusKnotGeometry } from "three"
+import { init3D,renderizar3D, girarCarro, setZoom, explodirCarro, resetarCarro } from "./coisas/TresDe.js"
 
 const game = {
   /** @type { Camera? } */
@@ -24,21 +23,38 @@ const game = {
   /** @type { HTMLCanvasElement? } */
   canvas: undefined,
 
-  gasolina : 50
+  valendo : false,
+  framesAteValer : 60,
+  gasolina : 50,
+  framesParado : 0,
+  carroExplodiu : false,
+  velocidadeAlvo : 3,
+
+  reset(){
+    this.velocidadeAlvo = 3
+    this.valendo = false
+    this.framesAteValer = 60
+    this.gasolina = 50
+    this.framesParado = 0
+    this.carroExplodiu = false
+  }
 }
 
-const parts = []
-for(let i = 0; i < 7; i ++){
-  parts.push({
-    radius : (2 + (Math.random()*10)|0)*20,
-    to : (Math.random()-0.5)*0.4
-  })
+function estradaInicial(){
+  const parts = []
+  for(let i = 0; i < 7; i ++){
+    parts.push({
+      radius : (2 + (Math.random()*10)|0)*20,
+      to : (Math.random()-0.5)*0.4
+    })
+  }
+  return parts  
 }
-let startingPosition = {
-  pos : [0,0],
-  angle : 0
-}
+
 function initGame(){
+  resetarCarro()
+  game.reset()
+  
   game.carro = new Carro({})
   game.camera = new Camera(SCREEN_WIDTH,SCREEN_HEIGHT)
 
@@ -49,6 +65,7 @@ function initGame(){
     to    : -0.5,
     width : 10
   })
+  let parts = estradaInicial()
 
   let segment = game.road
   let i = 0
@@ -58,25 +75,21 @@ function initGame(){
     // o quarto pedacinho é o que vai fazer a estrada crescer
     // quando a gente chegar nele.
     if(i==1){
-      startingPosition.pos = segment.startPoint
-      startingPosition.angle = segment.clockwise ? (segment.from+0.5) * Math.PI : (segment.from-0.5) * Math.PI
+      game.carro.position = segment.startPoint
+      game.carro.heading = segment.clockwise ? (segment.from+0.5) * Math.PI : (segment.from-0.5) * Math.PI
     }
     if(i==5){
       game.targetSegment=segment
     }
   }
+
   game.lastSegment = segment
   game.camera.setPos( game.road.endPoint )
-  
 }
 
 function drawRoad(ctx){
 
-  let segment = game.road
-  while(segment){
-    segment.draw( ctx, game.camera )
-    segment = segment.next
-  }
+  game.road.draw(ctx, game.camera)
   
   ctx.fillStyle = 'lime'
 
@@ -88,6 +101,7 @@ function drawRoad(ctx){
 
 const keyboard = {}
 
+// tirar isso.
 const mouse = {
   oldX : 0,
   oldY : 0,
@@ -111,9 +125,18 @@ const mouse = {
  * @param {number} velocidade 
  */
 function velocimetro(ctx, x,y, velocidade){
+  velocidade *= 3.6
+
   const max = 160
+  
   let porcentagem = Math.min(1,velocidade/max)
+
+  let porcentagemAlvo = (game.velocidadeAlvo*3.6)/max
+  
+
   let angulo = (0.8+porcentagem* 1.4)  * Math.PI
+
+  let anguloAlvo = (0.8+porcentagemAlvo*1.4) * Math.PI
 
   ctx.save()
   ctx.font = "16px monospace"
@@ -135,6 +158,15 @@ function velocimetro(ctx, x,y, velocidade){
   ctx.moveTo(x,y)
   ctx.strokeStyle="red"
   ctx.lineTo( x + Math.cos(angulo) * 30, y + Math.sin(angulo) * 30 )
+
+  ctx.fillStyle="red"
+  // botar uma coisinha na velocidade alvo
+  ctx.fillRect(
+    x + Math.cos(anguloAlvo) * 30 -2,
+    y + Math.sin(anguloAlvo) * 30 -2,
+    4,4
+  )
+
   ctx.stroke()
 }
 
@@ -155,13 +187,48 @@ function medidorDeGasolina(ctx, x,y, gasolina){
   ctx.restore()
 }
 
+
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} angulo 
+ */
+function indicadorPalhaco(ctx,x,y,angulo){
+  ctx.save()
+  ctx.fillText("🤡", x|0, y|0 )    
+  ctx.translate(x*1.1|0,y*1.1|0)
+  ctx.rotate( angulo )
+  ctx.fillText("👉",0,0)
+  ctx.restore()   
+}
+
 let a=0,b=0,g=0
 let frames = 0
+
 function tick(){
   const ctx = game.ctx
   ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
   const {camera,carro, road, targetSegment} = game
+
+  if(keyboard.e){
+    if(a==0){
+      a=1
+      explodirCarro()
+    }
+  }else{
+    a=0
+  }
+  if(keyboard.r){
+    if(b==0){
+      b=1
+      initGame()
+    }
+  }else{
+    b=0
+  }
 
   if(keyboard.a){
     carro.input.left = 1
@@ -193,16 +260,23 @@ function tick(){
     game.gasolina = 0
   }
 
+
   game.gasolina -= 0.08 * carro.input.throttle
 
   // freio de mão.
   carro.input.eBrake = keyboard.m ? 1 : 0
 
+
   drawRoad(ctx)
 
   camera.lookAt( carro.position )
   camera.zoom = (-carro.absVel / 100 )*10 + 10
-  carro.update(1000/60/1000)
+  
+  // carro explodiu
+  if(!game.carroExplodiu){
+    carro.update(1000/60/1000)
+  }
+  
 
   // faz a pista crescer
   let endPoint = targetSegment.endPoint
@@ -227,34 +301,62 @@ function tick(){
   // carro.draw(ctx, camera)
 
   ctx.fillText( "⛽", ...camera.translate(targetSegment.endPoint ))
-
   if(distToTarget > 20){
     let angulo = Math.atan2( dY, dX )
-    ctx.save()
+    
     let palhacoX =SCREEN_WIDTH/2 + Math.cos(angulo)*50
     let palhacoY =SCREEN_HEIGHT/2 + Math.sin(angulo)*50
-    ctx.fillText("🤡", palhacoX|0, palhacoY|0 )    
-    
-    ctx.translate(palhacoX*1.1|0,palhacoY*1.1|0)
-    ctx.rotate( angulo )
-    ctx.fillText("👉",0,0)
 
-    ctx.restore()    
+    indicadorPalhaco(ctx, palhacoX, palhacoY, angulo ) 
   }
 
-  //ctx.font = "20px serif"
-  frames++
-  ctx.save()
-  ctx.translate(120,SCREEN_HEIGHT-14)
-  ctx.textAlign="center"
-  ctx.textBaseline="middle"
-  ctx.scale(1 + Math.cos(frames*0.1)*0.2,1+ Math.cos(frames*0.1)*0.2)
-    ctx.fillText(
-       "💣" ,
-      0,
-      0 
-    )
-  ctx.restore()
+
+
+  if(game.valendo){
+    if(!game.carroExplodiu){
+      const tempoMaximo = 2
+      let lentoDemais=false
+
+      if(carro.absVel <= game.velocidadeAlvo){
+        game.framesParado++
+        lentoDemais=true
+      }else{
+        if(game.velocidadeAlvo < 30){
+          game.velocidadeAlvo += carro.absVel * 0.0001
+        }
+
+        game.framesParado--
+        if(game.framesParado<0)
+          game.framesParado = 0
+      }
+      // 2 segundos e BUM
+      if(game.framesParado > 60*tempoMaximo){
+        explodirCarro()
+        game.carroExplodiu=true
+        game.gasolina=0
+      }
+
+      if(lentoDemais){
+        frames++
+        let segundos = (tempoMaximo - (game.framesParado/60)).toFixed(2)
+        ctx.save()
+        ctx.translate(SCREEN_WIDTH/2,SCREEN_HEIGHT/2-60)
+        ctx.textAlign="center"
+        ctx.textBaseline="middle"
+        ctx.scale(1 + Math.cos(frames*0.1)*0.2,1+ Math.cos(frames*0.1)*0.2)
+          ctx.fillText(
+             "💣 "+segundos ,
+            0,
+            0 
+          )
+        ctx.restore()        
+      }
+    }  
+  }else{
+    if(--game.framesAteValer == 0){
+      game.valendo = true
+    }
+  }
 
   // gira o 3D lá.
   girarCarro(carro.heading)
@@ -262,7 +364,7 @@ function tick(){
   setZoom(camera.zoom)
   renderizar3D()
 
-  velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel * 3.6)
+  velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel)
   medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
 
   requestAnimationFrame( tick )
@@ -280,11 +382,9 @@ document.addEventListener("DOMContentLoaded", function (event) {
     
     game.ctx.font = "14px serif";
 
+    init3D(game.canvas)
     initInput()
     initGame()
-    init3D(game.canvas)
-    game.carro.position = startingPosition.pos
-    game.carro.heading = startingPosition.angle 
     tick()
 });
 

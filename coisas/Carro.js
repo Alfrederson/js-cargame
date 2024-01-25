@@ -54,6 +54,15 @@ class CarroControles{
     left = 0
     right = 0
     reverse = 0
+
+    reset(){
+        this.eBrake=0
+        this.throttle=0
+        this.brake=0
+        this.left=0
+        this.right=0
+        this.reverse=0
+    }
 }
 
 /**
@@ -113,6 +122,21 @@ class Carro {
 
     /** @type {CarroConfigOptions} */
     config = {}
+
+    reset(){
+        this.heading = 0
+        this.position = [0,0]
+        this.velocity = [0,0]
+        this.velocity_c = [0,0]
+        this.accel = [0,0]
+        this.accel_c = [0,0]
+        this.absVel = 0
+        this.yawRate = 0
+        this.steer = 0
+        this.steerAngle = 0
+        this.input.reset()
+    }
+
      /**
      * @param {CanvasRenderingContext2D} ctx 
      * @param {Camera} camera 
@@ -154,6 +178,8 @@ class Carro {
 
         let cfg = this.config
     }
+
+
 
     /**
      * 

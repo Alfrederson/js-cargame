@@ -6,13 +6,17 @@ import {
     WebGLRenderer,
     Scene,
     DirectionalLight,
-    SpotLight,
     AmbientLight,
     Vector3,
     PerspectiveCamera,
     BoxGeometry,
+    IcosahedronGeometry,
     MeshStandardMaterial,
-    Object3D
+    Object3D,
+    InstancedMesh,
+    AdditiveBlending,
+    MultiplyBlending,
+    MeshBasicMaterial
 } from 'three'
 import {
     GLTFLoader 
@@ -20,6 +24,81 @@ import {
 
 import carro_mesh from './carro_mesh';
 import { PointLight } from 'three'
+
+/** @interface */
+class Particula{
+    object = undefined
+    finished = false
+    tick(){}
+}
+
+const bola = new BoxGeometry(1,1,1)
+
+class Explosao{
+    /** @type {Object3D} */
+    object = undefined
+    finished = false
+    scale = 0
+    lifeTime = 0
+    constructor(x,y,z){
+        let material = new MeshBasicMaterial({
+            color : 0xFFFF00,
+            transparent: true,
+            blending: AdditiveBlending,
+            depthTest: false
+        })
+        this.object = new Mesh(bola, material)
+        this.object.position.set(x,y,z)
+        this.scale = 1.5
+    }
+    tick(){
+        if(this.lifeTime < 15){
+            this.scale -= 0.1
+        }else{
+            this.object.material.opacity *= 0.9
+        }
+        this.object.scale.set(this.scale, this.scale, this.scale)
+        if(++this.lifeTime > 120){
+            this.finished = true
+        }
+    }
+}
+
+class Fumaca{
+    /** @type {Object3D} */
+    object = undefined
+    finished = false
+    scale = 0.2
+    lifeTime = 0
+    sY = 0
+    constructor(x,y,z){
+        let material = new MeshStandardMaterial({
+            color : 0x222222,
+            transparent: true,
+        })
+        this.object = new Mesh(bola, material)  
+        this.object.position.set(x,y,z)     
+        this.sy = 0.02 + Math.random() * 0.05 
+    }
+    tick(){
+        if(this.lifeTime < 5){
+            this.scale += 0.1
+        }else{
+            this.scale -= 0.01
+            if(this.scale <= 0) this.scale = 0
+        }
+        this.object.material.opacity *= 0.99
+        this.object.scale.set(this.scale, this.scale, this.scale)
+        this.object.position.y += this.sy
+        this.object.rotation.x += 0.05
+        this.object.rotation.y += 0.05
+        this.object.rotation.z += 0.05
+
+        if(++this.lifeTime > 120){
+            this.finished = true
+        }
+    }    
+}
 
 
 let cena = {
@@ -33,7 +112,21 @@ let cena = {
     camera : undefined,
 
     /** @type {Scene?} */
-    scene : undefined
+    scene : undefined,
+
+    /** @type {Particula[]} */
+    particulas : [],
+
+    /**
+     * 
+     * @param {Particula} p 
+     */
+    addParticula( p ){
+        if(p.object){
+            this.particulas.push( p )
+            this.scene.add( p.object )    
+        }
+    }
 }
 
 /** @type {GLTFLoader} */
@@ -94,7 +187,7 @@ function init3D(element){
     )
 
     const geometry = new BoxGeometry( 1, 0.4, 0.4)
-    const material = new MeshStandardMaterial({ color : 0x00FF00 , wireframe: false})
+    const material = new MeshStandardMaterial({ color : 0x00FF00 })
 
     loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
         scene.rotation.y = Math.PI*0.5
@@ -116,15 +209,50 @@ function girarCarro( angulo ){
 }
 
 function resetarCarro(){
-
+    // limpar as explosões...
+    cena.renderer.clear()
+    for(let p of cena.particulas){
+        cena.scene.remove(p.object)
+    }
+    cena.particulas = []
+    // resetar o carro...
+    cena.carro.visible=true
 }
 
 function explodirCarro(){
-
+    let particulas = [
+        new Explosao(0,0,0),
+    ]    
+    let spreadX = 1.2
+    let spreadZ = 1
+    for(let i = 0; i < 10; i++){
+        particulas.push(
+            new Fumaca(
+                spreadX * (Math.random() -0.5),
+                0.1,
+                spreadZ * (Math.random() -0.5)
+            )
+        )
+    }
+    for(let particula of particulas){
+        cena.addParticula( particula )
+    }
+    cena.carro.visible=false
 }
 
 function renderizar3D(){
     cena.renderer.clear()
+    // atualizar as explosões...
+    let particulas = []
+    for(let p of cena.particulas){
+        p.tick()
+        if(p.finished){
+            cena.scene.remove( p.object )
+        }else{
+            particulas.push( p )
+        }
+    }
+    cena.particulas = particulas
     cena.renderer.render( cena.scene, cena.camera )
 }
 

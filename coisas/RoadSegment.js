@@ -259,6 +259,23 @@ class RoadSegment{
 
       this.drawAsphalt(ctx, camera)
 
+      // tracejado
+      ctx.strokeStyle="#F0CD0E"
+      ctx.lineWidth = 3
+      const waypointCount = this.waypoints.length
+      for(let i = 0; i < waypointCount; i+=2){
+        if(i < waypointCount-1 ){
+          ctx.beginPath()
+          ctx.moveTo( ...camera.translate(this.waypoints[i]) )
+          ctx.lineTo( ...camera.translate(this.waypoints[i+1]))
+          ctx.stroke()
+        }
+      }
+
+      if(this.next){
+        this.next.draw(ctx, camera)
+      }
+
       return
       const [centerX, centerY] = this.center
       const angleIncrement = (this.to*Math.PI)/this.segments;
