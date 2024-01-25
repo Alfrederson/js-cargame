@@ -39,9 +39,11 @@ const game = {
   framesParado : 0,
   carroExplodiu : false,
   velocidadeAlvo : 3,
+  distancia : 0,
 
   reset(){
     this.velocidadeAlvo = 3
+    this.distancia = 0
     this.valendo = false
     this.framesAteValer = 60
     this.gasolina = GAME_GASOLINA_INICIAL
@@ -251,6 +253,7 @@ function tick(){
   const dY = endPoint[1] - carro.position[1]
   const distToTarget = Math.sqrt( dX*dX + dY*dY)
   if(distToTarget <= game.road.width*0.5){
+    game.distancia += game.targetSegment.length    
     // tira um do começo
     game.road = road.next
     game.targetSegment = game.targetSegment.next
@@ -317,6 +320,12 @@ function tick(){
         ctx.restore()        
       }
     }  
+
+    game.distancia += carro.absVel * 0.016
+    ctx.save()
+    ctx.font = "20px monospace"
+    ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 40)
+    ctx.restore()
   }else{
     if(--game.framesAteValer == 0){
       game.valendo = true
