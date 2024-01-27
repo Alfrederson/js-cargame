@@ -2,20 +2,72 @@
 import {
   SCREEN_WIDTH,
   SCREEN_HEIGHT,
-  VIRTUAL_SCREEN_WIDTH, // não sei o que vou fazer com isso ainda.
-  VIRTUAL_SCREEN_HEIGHT,
   GAME_MAX_SPEED,
   GAME_GASOLINA_INICIAL,
-  GAME_TEMPO_MAXIMO_PARADO
+  GAME_TEMPO_MAXIMO_PARADO,
 } from "./config.js"
 
+
+
+function $(id){
+  return document.getElementById(id)
+}
+HTMLElement.prototype.show = function(){
+  this.classList.remove("hidden")
+}
+HTMLElement.prototype.hide = function(){
+  this.classList.add("hidden")
+}
+
 import * as ui from "./coisas/Ui.js"
+
+// nota: esse módulo não é público!!!!!!!!
+// usar o dummy abaixo para rodar o jogo localmente.
+// import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
+
+// import {
+//   LEADERBOARD_API_KEY,
+//   LEADERBOARD_URL,
+//   LEADERBOARD_GAME_ID
+// } from "./leaderboard.config.js"
+
+const LEADERBOARD_API_KEY = "qualquer coisa"
+const LEADERBOARD_URL = "qualquer coisa"
+const LEADERBOARD_GAME_ID = "qualquer coisa"
+
+// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
+const leaderboard = {
+  meu_score:0,
+  meu_nome:"",
+  getPlayerId(url,playerName){
+    this.meu_nome = "jogando local"
+    return new Promise ( (resolve, _)=>{
+      resolve({
+        playerName : playerName,
+        playerId : 123456
+      })
+    })
+  },
+  submitScore(bla,blabla,{playerName,score}){
+    this.meu_score=score
+    return new Promise( (resolve,reject) => resolve() )
+  },
+  getLeaderboard(url,gameId){
+    return [
+      {place : 1, player_name : "El Gato", total_score : 1000},
+      {place : 2, player_name : "El Gato", total_score : 1000},
+      {place : 3, player_name : "El Gato", total_score : 1000},
+      {place : 9999, player_name : "jogando local", total_score : this.meu_score},
+    ]
+  }
+}
+
 
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
 import * as tresD from "./coisas/TresDe.js"
-import { dist2d, uma_so_vez, vec2_angle, vec2_sub } from "./coisas/util.js"
+import { dist2d, fazer, vec2_angle, vec2_sub } from "./coisas/util.js"
 
 const game = {
   /** @type { Camera? } */
@@ -43,6 +95,9 @@ const game = {
   velocidadeAlvo : 3,
   distancia : 0,
   maiorDistancia : 0,
+
+  // isso é pro placar.
+  identidade : {},
 
   reset(){
     this.velocidadeAlvo = 3
@@ -121,13 +176,38 @@ const keyboard = {
 }
 
 
-function mandarHighScore(){
+async function mandarHighScore(){
   // primeiro a gente salva só localmente
   if(game.distancia > game.maiorDistancia){
     game.maiorDistancia = game.distancia
+  }else{
+    // a pessoa não se superou o bastante.
+    return
   }
   localStorage.setItem("maiorDistancia", game.maiorDistancia)
+  // sim, isso vai ter um comportamento bizarro se o servidor não responder.
+  // por sorte, o cloudflare é bem rápido.
   // depois a gente manda pro leaderboard, que na verdade ignora esse valor salvo.
+  try{
+    await leaderboard.submitScore(LEADERBOARD_URL, LEADERBOARD_API_KEY, { gameId: LEADERBOARD_GAME_ID, score: game.distancia})
+    const placar = await leaderboard.getLeaderboard(LEADERBOARD_URL, LEADERBOARD_GAME_ID)
+    // placar é assim:
+    // [{
+    //       "place": "1",
+    //       "player_name": "El Gato",
+    //       "total_score": "154.00"
+    // },...]
+    $("leaderboard").show()
+    let medalha = ["", "🥇", "🥈","🥉"];
+    let html = "<tr><td>#</td><td></td><td></td></tr>"
+    $("tb_Leaderboard").innerHTML = ""
+    for(let {place,player_name,total_score} of placar){
+      html += `<tr><td>${place+(medalha[place] ?? "")}</td><td>${player_name}</td><td>${(parseFloat(total_score)/1000).toFixed(2)}km</td></tr>`
+    }
+    $("tb_Leaderboard").innerHTML = html  
+  }catch(e){
+    console.log("não enviei o score porque: ", e)
+  }
 }
 
 function tick(){
@@ -137,6 +217,7 @@ function tick(){
   ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
   if(keyboard.hit("r")){
+    $("leaderboard").hide()
     initGame()
   }
   carro.input.left = keyboard.a ? 1 : 0
@@ -243,7 +324,7 @@ function tick(){
 
 // A gente tem que dar um jeito de deixar isso bonito no celular também.
 document.addEventListener("DOMContentLoaded", function (event) {
-    game.canvas = document.getElementById("myCanvas");
+    game.canvas = $("myCanvas");
 
     game.canvas.width = SCREEN_WIDTH
     game.canvas.height = SCREEN_HEIGHT
@@ -290,19 +371,34 @@ function initInput(){
   })
   document.onkeydown = ({key}) => keyboard[ key ] = true
   document.onkeyup = ({key}) => keyboard[ key ] = false
-  // esconder manualzinho
-
-  // a pessoa já jogou alguma vez?
-  uma_so_vez("ver_o_manual", ()=>{
-    document.getElementById("manual").classList.remove("hidden")
-  })
-
-  document.getElementById("btn_hideManual").onclick = ()=>{
-    document.getElementById("manual").classList.add("hidden")
-  }
-
-
-  // se a pessoa morrer, vai mostrar isso aqui.
+  // perguntar o nome se a pessoa nunca jogou
+  fazer("ver_o_manual").uma_so_vez(
+      ok =>{
+        $("manual").show()
+        $("btn_hideManual").onclick = ()=>{
+          $("manual").hide()
+          ok()
+        }
+      },
+      ok =>{
+        $("playerName").show()
+        $("fm_playerName").onsubmit = event =>{
+          event.preventDefault()
+          let nome = $("in_playerName").value.trim()
+          if(nome.length < 3 || nome.length > 20)
+            return $("in_playerName").setCustomValidity("🤔")
+          // pelo código eu misturo esse estilo de promise com await porque
+          // eu não fui capaz de fazer essa coisa aceitar funções asincronas.
+          leaderboard.getPlayerId( LEADERBOARD_URL, nome ).then( resposta =>
+            game.identidade = resposta
+          ).catch(
+            erro => console.log("não pude obter identidade porque: ", erro)
+          )
+          $("playerName").hide()
+          ok()
+        }
+      }
+  )
 }
 
 export { Camera }

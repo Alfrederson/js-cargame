@@ -49,15 +49,45 @@ export function vec2_len(vec){
     return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1])
 }
 
+export function sequencia( ...passos ){
+    let promise
+    for(let i = 0; i < passos.length; i++){
+        if(i==0){
+            promise = new Promise( (resolve,reject) =>{
+                passos[i]( resolve )
+            })
+        }else{
+            promise = promise.then(
+                ()=>{
+                    return new Promise( (resolve,reject)=>{
+                        passos[i]( resolve )
+                    })
+                }
+            )
+        }
+    }
+    return promise
+}
+
 /**
  * Faz alguma coisa uma só vez.
  * @param {string} chave 
- * @param {function} o_que 
+ * @param {function} callback 
  */
-export function uma_so_vez( chave, o_que ){
+export function fazer( chave ){
     let ja_fez = localStorage.getItem(chave)
-    if(ja_fez==null){
+    if(ja_fez == null){
         localStorage.setItem(chave,"ja")
-        o_que()
+        return {
+            uma_so_vez : sequencia
+        }
     }
+    // faz nada.
+    return {
+        uma_so_vez : function(){}
+    }
+}
+
+export function passo( callback ){
+    return new Promise( callback )
 }

@@ -185,14 +185,23 @@ function init3D(element){
         1000
     )
 
-    const geometry = new BoxGeometry( 1, 0.4, 0.4)
-    const material = new MeshStandardMaterial({ color : 0x00FF00 })
+    // const geometry = new BoxGeometry( 1, 0.4, 0.4)
+    // const material = new MeshStandardMaterial({ color : 0x00FF00 })
+
+    
 
     loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
         scene.rotation.y = Math.PI*0.5
         scene.scale.set(0.5,0.5,0.5)
         cena.carro.add(scene)
     })
+
+    // não estou usando isso aqui ainda por causa do base do vite.
+    // loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
+    //     scene.rotation.y = Math.PI*0.5
+    //     scene.scale.set(0.5,0.5,0.5)
+    //     cena.carro.add(scene)
+    // })
 
     cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
