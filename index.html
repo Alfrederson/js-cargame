@@ -3,7 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ad sense-->
+    <meta name="google-adsense-account" content="ca-pub-9754268803581055">
+    
+    <!-- meta tag-->
+    <meta property="og:title" content="Burnout Turbo 64">
+    <meta property="og:description" content="Até que ponto você vai?">
+    <meta property="og:image" content="https://burnout-64.web.app/miniature.jpg">
+    <meta property="og:image:width" content="1024">
+    <meta property="og:image:height" content="1024">
+    <meta property="og:type" content="website">
+
     <title>Burnout Turbo 64</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <style>
         body{
             width: 100vw;
@@ -24,9 +36,7 @@
         }
         .porta-texto{
             position: fixed;
-            right:0px;
-            bottom:0px;
-            z-index: -1;
+            padding: 6em;
         }
         #myCanvas{
             max-width: 100%;
@@ -40,21 +50,81 @@
             position: absolute;
             image-rendering: pixelated;
         }
+        .leaderboard{
+            position:fixed;
+            padding:2em;
+            font-size:1em;
+        }
+        .hidden{
+            display: none;
+        }
+        .overlay{
+            position: fixed;
+            width:100svw;
+            height: 100svh;
+            z-index: 3;
+        }
+        li{
+            list-style:none;
+        }
     </style>
     <script src="./main.js" type="module"></script>
+    <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-QT4FGLR6K6"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-QT4FGLR6K6');
+        </script>
 </head>
-    <body>            
+    <body>    
         <div class="porta-canvas">
-            <div class="porta-texto">
-                <ul>
-                    <li>w : acelerar/gas</li>
-                    <li>s : freiar/brake</li>
-                    <li>a : esquerda/left</li>
-                    <li>d : direita/right</li>
-                    <li>m : freio de mão/emergency brake</li>
-                </ul>    
-            </div>            
             <canvas id="myCanvas" width="600" height="600" ></canvas>
-        </div>
+        </div>        
+        <div class="overlay">
+            <div class="container py-5 hidden" id="manual">
+                <div class="card shadow mx-auto" style="width: fit-content;">
+                    <div class="card-body">
+                        <ul>
+                            <li><kbd>w</kbd> acelerar/gas</li>
+                            <li><kbd>s</kbd> freiar/brake</li>
+                            <li><kbd>a</kbd> esquerda/left</li>
+                            <li><kbd>d</kbd> direita/right</li>
+                            <li><kbd>m</kbd> freio de mão/emergency brake</li>
+                            <li><kbd>r</kbd> resetar/try again</li>
+                        </ul>
+                        <button class="btn form-control" id="btn_hideManual">click 🤡</button>            
+                    </div>    
+                </div>
+            </div>
+            <div class="container-sm py-4 hidden" id="playerNameForm">
+                <div class="card shadow mx-auto" style="width: fit-content;">
+                    <div class="card-body">
+                        <h1 class="text-center" id="lb_finalScore">4.123km</h1>
+                        <form id="fm_playerName">
+                            <label for="in_playerName"></label>
+                            <input type="text" class="form-control mb-4" id="in_playerName" placeholder="seu nome"/>
+                            <input type="submit" class="btn form-control" id="btn_hideManual"/>            
+                        </form>
+                    </div>    
+                </div>
+            </div>
+            <div class="container-sm py-5 hidden" id="leaderboard">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h5>placar de sobreviventes</h5>
+                        <table class="table">
+                            <tr><td>#</td><td></td><td></td></tr>
+                            <tr><td>1 🥇</td><td>El Gato</td><td>6.0km</td></tr>
+                            <tr><td>2 🥈</td><td>El Gato</td><td>6.0km</td></tr>
+                            <tr><td>3 🥉</td><td>El Gato</td><td>6.0km</td></tr>
+                            <tr><td>99</td><td>Você</td><td>0.0km</td></tr>
+                        </table>    
+                    </div>
+                </div>
+            </div>
+        </div>            
     </body>
 </html>

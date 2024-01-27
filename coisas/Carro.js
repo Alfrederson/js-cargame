@@ -1,25 +1,6 @@
 import { Camera } from "./Camera"
 
-
-const X = 0
-const Y = 1
-
-function clamp(x,min,max){
-    if(x < min)
-        return min
-    if(x > max)
-        return max
-    return x
-}
-
-/**
- * 
- * @param {number[]} vec 
- * @returns comprimento do vetor
- */
-function vec2_len(vec){
-    return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1])
-}
+import { clamp, vec2_len } from "./util"
 
 /**
  * @typedef {Object} CarroConfigOptions

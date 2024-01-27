@@ -2,10 +2,11 @@
 import {
   SCREEN_WIDTH,
   SCREEN_HEIGHT,
-  VIRTUAL_SCREEN_WIDTH,
+  VIRTUAL_SCREEN_WIDTH, // não sei o que vou fazer com isso ainda.
   VIRTUAL_SCREEN_HEIGHT,
   GAME_MAX_SPEED,
-  GAME_GASOLINA_INICIAL
+  GAME_GASOLINA_INICIAL,
+  GAME_TEMPO_MAXIMO_PARADO
 } from "./config.js"
 
 import * as ui from "./coisas/Ui.js"
@@ -13,7 +14,8 @@ import * as ui from "./coisas/Ui.js"
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
-import { init3D,renderizar3D, girarCarro, setZoom, explodirCarro, resetarCarro } from "./coisas/TresDe.js"
+import * as tresD from "./coisas/TresDe.js"
+import { dist2d, uma_so_vez, vec2_angle, vec2_sub } from "./coisas/util.js"
 
 const game = {
   /** @type { Camera? } */
@@ -40,6 +42,7 @@ const game = {
   carroExplodiu : false,
   velocidadeAlvo : 3,
   distancia : 0,
+  maiorDistancia : 0,
 
   reset(){
     this.velocidadeAlvo = 3
@@ -66,7 +69,11 @@ function estradaInicial(){
 }
 
 function initGame(){
-  resetarCarro()
+  let maiorDistanciaSalva = localStorage.getItem("maiorDistancia")
+  if(maiorDistanciaSalva !== null){
+    game.maiorDistancia = parseFloat( maiorDistanciaSalva )
+  }
+  tresD.resetarCarro()
   game.carro = new Carro({})
   game.camera = new Camera(SCREEN_WIDTH,SCREEN_HEIGHT)
   game.reset()
@@ -88,11 +95,10 @@ function initGame(){
     // quando a gente chegar nele.
     if(i==1){
       game.carro.position = segment.startPoint
-      game.carro.heading = segment.clockwise ? (segment.from+0.5) * Math.PI : (segment.from-0.5) * Math.PI
+      game.carro.heading = (segment.from + (segment.clockwise ? 0.5 : -0.5)) * Math.PI
     }
-    if(i==5){
+    if(i==5)
       game.targetSegment=segment
-    }
   }
 
   game.lastSegment = segment
@@ -114,131 +120,38 @@ const keyboard = {
   }
 }
 
-// tirar isso.
-const mouse = {
-  oldX : 0,
-  oldY : 0,
 
-  x : 0,
-  y : 0,
-
-  speedX : 0,
-  speedY : 0,
-
-  button : []
+function mandarHighScore(){
+  // primeiro a gente salva só localmente
+  if(game.distancia > game.maiorDistancia){
+    game.maiorDistancia = game.distancia
+  }
+  localStorage.setItem("maiorDistancia", game.maiorDistancia)
+  // depois a gente manda pro leaderboard, que na verdade ignora esse valor salvo.
 }
-
-
-// o marcador vai até quanto?
-/**
- * 
- * @param {CanvasRenderingContext2D} ctx 
- * @param {number} x 
- * @param {number} y 
- * @param {number} velocidade 
- */
-function velocimetro(ctx, x,y, velocidade){
-  velocidade *= 3.6
-
-  const max = GAME_MAX_SPEED
-  
-  let porcentagem = Math.min(1,velocidade/max)
-
-  let porcentagemAlvo = (game.velocidadeAlvo*3.6)/max
-  
-
-  let angulo = (0.8+porcentagem* 1.4)  * Math.PI
-
-  let anguloAlvo = (0.8+porcentagemAlvo*1.4) * Math.PI
-
-  ctx.save()
-  ctx.font = "16px monospace"
-  ctx.fillStyle = "black"
-  ctx.textBaseline = "top"
-  ctx.textAlign = "center"
-  ctx.fillText(
-    "0",
-    x + Math.cos( (0.8+0*1.4)*Math.PI  )* 30,
-    y + Math.sin( (0.8+0*1.4)*Math.PI  )* 30,
-  )
-  ctx.fillText(
-    max,
-    x + Math.cos( (0.8+1*1.4)*Math.PI  )* 30,
-    y + Math.sin( (0.8+1*1.4)*Math.PI  )* 30,
-  )
-  ctx.restore()
-
-  ctx.moveTo(x,y)
-  ctx.strokeStyle="red"
-  ctx.lineTo( x + Math.cos(angulo) * 30, y + Math.sin(angulo) * 30 )
-
-  ctx.fillStyle="red"
-  // botar uma coisinha na velocidade alvo
-  ctx.fillRect(
-    x + Math.cos(anguloAlvo) * 30 -2,
-    y + Math.sin(anguloAlvo) * 30 -2,
-    4,4
-  )
-
-  ctx.stroke()
-}
-
-
-
-
-/**
- * 
- * @param {CanvasRenderingContext2D} ctx 
- * @param {number} x 
- * @param {number} y 
- * @param {number} angulo 
- */
-function indicadorPalhaco(ctx,x,y,angulo){
-  ctx.save()
-  ctx.fillText("🤡", x|0, y|0 )    
-  ctx.translate(x*1.1|0,y*1.1|0)
-  ctx.rotate( angulo )
-  ctx.fillText("👉",0,0)
-  ctx.restore()   
-}
-
-let a=0,b=0,g=0
-let frames = 0
 
 function tick(){
   const ctx = game.ctx
-  ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
-
   const {camera,carro, road, targetSegment} = game
+
+  ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
   if(keyboard.hit("r")){
     initGame()
   }
   carro.input.left = keyboard.a ? 1 : 0
   carro.input.right = keyboard.d ? 1 : 0
-  if(keyboard.w){
-    carro.input.throttle = 1
-  } else if(keyboard.s){
-    // se tá acelerando, freia.
-    //carro.input.reverse = 1
-    carro.input.brake = 1    
-  } else{
-    carro.input.throttle = 0
-    carro.input.brake = 0
-    //carro.input.reverse = 0
-  }
+  carro.input.throttle = keyboard.w ? 1 : 0
+  carro.input.brake = keyboard.s ? 1 : 0
+  carro.input.eBrake = keyboard.m ? 1 : 0
 
   game.gasolina -= 0.08 * carro.input.throttle
-  // gasolina.
   if(game.gasolina <= 0){
     carro.input.throttle = 0
     carro.input.reverse = 0
     game.gasolina = 0
   }
 
-  // freio de mão.
-  carro.input.eBrake = keyboard.m ? 1 : 0
-  
   camera.lookAt( carro.position )
   camera.zoom = (-carro.absVel / 100 )*10 + 10
   
@@ -249,9 +162,8 @@ function tick(){
 
   // faz a pista crescer
   let endPoint = targetSegment.endPoint
-  const dX = endPoint[0] - carro.position[0]
-  const dY = endPoint[1] - carro.position[1]
-  const distToTarget = Math.sqrt( dX*dX + dY*dY)
+
+  const distToTarget = dist2d(endPoint, carro.position)
   if(distToTarget <= game.road.width*0.5){
     game.distancia += game.targetSegment.length    
     // tira um do começo
@@ -273,19 +185,21 @@ function tick(){
 
   ctx.fillText( "⛽", ...camera.translate(targetSegment.endPoint ))
   if(distToTarget > 20){
-    let angulo = Math.atan2( dY, dX )
-    indicadorPalhaco(ctx,
+    let angulo =  vec2_angle( vec2_sub( endPoint, carro.position ) ) // Math.atan2( dY, dX )
+    ui.indicadorPalhaco(ctx,
       SCREEN_WIDTH/2 + Math.cos(angulo)*50,
       SCREEN_HEIGHT/2 + Math.sin(angulo)*50,
       angulo
     ) 
   }
-
+  let lentoDemais = false
+  // tempo que a pessoa pode ficar parada.
+  if(!game.valendo && --game.framesAteValer == 0)
+    game.valendo = true
+  
   if(game.valendo){
     if(!game.carroExplodiu){
-      const tempoMaximo = 2
-      let lentoDemais=false
-
+      game.distancia += carro.absVel * 0.016
       if(carro.absVel <= game.velocidadeAlvo){
         game.framesParado++
         lentoDemais=true
@@ -293,53 +207,36 @@ function tick(){
         if(game.velocidadeAlvo < 30){
           game.velocidadeAlvo += carro.absVel * 0.0001
         }
-        game.framesParado--
-        if(game.framesParado<0)
+        if(--game.framesParado<0)
           game.framesParado = 0
       }
       // 2 segundos e BUM
-      if(game.framesParado > 60*tempoMaximo){
-        explodirCarro()
+      if(game.framesParado > 60*GAME_TEMPO_MAXIMO_PARADO){
+        tresD.explodirCarro()
+        mandarHighScore()
         game.carroExplodiu=true
         game.gasolina=0
       }
-
-      if(lentoDemais){
-        frames++
-        let segundos = (tempoMaximo - (game.framesParado/60)).toFixed(2)
-        ctx.save()
-        ctx.translate(SCREEN_WIDTH/2,SCREEN_HEIGHT/2-60)
-        ctx.textAlign="center"
-        ctx.textBaseline="middle"
-        ctx.scale(1 + Math.cos(frames*0.2)*0.2,1+ Math.cos(frames*0.2)*0.2)
-          ctx.fillText(
-             "💣 "+segundos ,
-            0,
-            0 
-          )
-        ctx.restore()        
-      }
     }  
-
-    game.distancia += carro.absVel * 0.016
     ctx.save()
     ctx.font = "20px monospace"
     ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 40)
-    ctx.restore()
-  }else{
-    if(--game.framesAteValer == 0){
-      game.valendo = true
+    if(game.maiorDistancia){
+      ctx.font = "12px monospace"
+      ctx.fillText((game.maiorDistancia/1000).toFixed(2)+"km", 20, 60)
     }
+    ctx.restore()
   }
+  // NOTA: o carro 3D está em um espaço diferente.
+  tresD.girarCarro(carro.heading)
+  tresD.setZoom(camera.zoom)
+  tresD.renderizar3D()
 
-  // gira o 3D lá.
-  girarCarro(carro.heading)
-  // zoom
-  setZoom(camera.zoom)
-  renderizar3D()
-
-  velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel)
+  ui.velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
   ui.medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
+
+  if(lentoDemais)
+    ui.mostrarBomba(ctx,SCREEN_WIDTH/2,SCREEN_HEIGHT/2-60,(GAME_TEMPO_MAXIMO_PARADO - (game.framesParado/60)).toFixed(2))   
 
   requestAnimationFrame( tick )
 }
@@ -355,27 +252,14 @@ document.addEventListener("DOMContentLoaded", function (event) {
     game.ctx = game.canvas.getContext("2d");
     game.ctx.font = "14px serif";
 
-    init3D(game.canvas)
+    tresD.init3D(game.canvas)
     initInput()
     initGame()
     tick()
 });
 
 function initInput(){
-  game.canvas.addEventListener("mousemove", function(/** @type {MouseEvent} */ event ){
-    const rect = game.canvas.getBoundingClientRect();
-    mouse.oldX = mouse.x
-    mouse.oldY = mouse.y
-  
-    mouse.x = event.clientX - rect.left;
-    mouse.y = event.clientY - rect.top;
-  
-    mouse.speedX = mouse.x - mouse.oldX
-    mouse.speedY = mouse.y - mouse.oldY
-  })
-
-  let touchX
-  let oldTouchX
+  let touchX, oldTouchX
   document.addEventListener("touchstart", function(event){
     oldTouchX = touchX = event.touches[0].clientX
     keyboard.w = true
@@ -404,12 +288,21 @@ function initInput(){
     keyboard.d = false
     keyboard.s = false
   })
-  document.addEventListener("keydown",event =>{
-    keyboard[ event.key ] = true
+  document.onkeydown = ({key}) => keyboard[ key ] = true
+  document.onkeyup = ({key}) => keyboard[ key ] = false
+  // esconder manualzinho
+
+  // a pessoa já jogou alguma vez?
+  uma_so_vez("ver_o_manual", ()=>{
+    document.getElementById("manual").classList.remove("hidden")
   })
-  document.addEventListener("keyup",event =>{
-    keyboard[ event.key ] = false
-  })  
+
+  document.getElementById("btn_hideManual").onclick = ()=>{
+    document.getElementById("manual").classList.add("hidden")
+  }
+
+
+  // se a pessoa morrer, vai mostrar isso aqui.
 }
 
 export { Camera }

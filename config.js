@@ -6,7 +6,8 @@ const
 
 const
     GAME_MAX_SPEED = 160,
-    GAME_GASOLINA_INICIAL=50
+    GAME_GASOLINA_INICIAL=50,
+    GAME_TEMPO_MAXIMO_PARADO=2
 
 function setScreeSize(w,h){
     SCREEN_WIDTH = w
@@ -20,5 +21,6 @@ export {
     VIRTUAL_SCREEN_HEIGHT,
     GAME_MAX_SPEED,
     GAME_GASOLINA_INICIAL,
+    GAME_TEMPO_MAXIMO_PARADO,
     setScreeSize
 }
