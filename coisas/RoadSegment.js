@@ -23,6 +23,65 @@ class RoadSegment{
   
     clockwise = true
 
+    generateVertexBuffer(){
+      const vertices = []
+      const indices = []
+      const vertexCount = Math.max(2, (this.length / EDGE_LENGTH)|0)
+      const angleIncrement = this.to / vertexCount
+      /*
+          o resultado dessa coisa são duas arrays.
+          uma array contem uma lista de vértices, a outra contem uma lista de índices.
+
+          3-----4  - os vértices formam uma sequência assim.
+          | \   |  - pra gerar o mesh, a gente precisa, então,
+          |   \ |  - ter uma sequência assim:
+          2-----5 
+          | \   |   [0 1 7]
+          |   \ |   [7 1 6]
+          1-----6   [1 2 6]
+          | \   |   [6 2 5]
+          |   \ |   [2 3 5]
+          0-----7   [5 3 4]
+
+          a resolução é um leetcode nível fácil.
+      */
+      // vai fazendo o lado esquerdo
+      const [x,y] = this.center
+      for(let i = 0; i <= vertexCount; i++){
+        vertices.push(x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2))
+        vertices.push(0)
+        vertices.push(y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2))
+      }
+      // agora o direito
+      for(let i = vertexCount; i >= 0; i--){
+        vertices.push(x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2))
+        vertices.push(0)
+        vertices.push(y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2))
+      }
+      for(let i = 0; i < vertexCount; i ++){
+        if(this.clockwise){
+          // triangulo da esquerda
+          indices.push(i)
+          indices.push(i+1)
+          indices.push(vertexCount*2-i+1)
+          // triangulo da direita
+          indices.push(vertexCount*2-i+1)
+          indices.push(i+1)
+          indices.push(vertexCount*2-i)
+        }else{
+          // triangulo da esquerda
+          indices.push(vertexCount*2-i+1)
+          indices.push(i+1)
+          indices.push(i)
+          // triangulo da direita
+          indices.push(vertexCount*2-i)
+          indices.push(i+1)
+          indices.push(vertexCount*2-i+1)
+        }
+      }
+      return {vertices, indices}
+    }
+
     generateVertices(){
       const vertexCount = Math.max(2, (this.length / EDGE_LENGTH)|0)
       const angleIncrement = this.to / vertexCount
@@ -31,7 +90,8 @@ class RoadSegment{
       for(let i = 0; i <= vertexCount; i++){
         this.vertices.push([
           x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2),
-          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2)
+          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2),
+          0
         ])
       }
 
@@ -40,9 +100,12 @@ class RoadSegment{
       for(let i = vertexCount; i >= 0; i--){
         this.vertices.push([
           x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2),
-          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2)
+          y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2),
+          0
         ])
       }
+
+      return this.vertices
     }
   
     generateWaypoints(){
@@ -59,7 +122,7 @@ class RoadSegment{
       this.waypoints.push( this.endPoint)
     }
   
-    constructor({center,radius,from, to, prev, width}){
+    constructor({/** @type {number[]}*/center,/** @type {number}*/radius,/** @type {number}*/from,/** @type {number}*/to,/** @type {RoadSegment?}*/prev, /** @type {number} */width}){
       if(to < 0){
         this.clockwise = false;
       }

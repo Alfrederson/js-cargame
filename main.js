@@ -1,4 +1,5 @@
 
+//@ts-check
 import {
   SCREEN_WIDTH,
   SCREEN_HEIGHT,
@@ -6,15 +7,17 @@ import {
   GAME_GASOLINA_INICIAL,
   GAME_TEMPO_MAXIMO_PARADO,
 } from "./config.js"
-
-
-
+/**
+ * @param {string} id
+ */
 function $(id){
   return document.getElementById(id)
 }
+// @ts-ignore
 HTMLElement.prototype.show = function(){
   this.classList.remove("hidden")
 }
+// @ts-ignore
 HTMLElement.prototype.hide = function(){
   this.classList.add("hidden")
 }
@@ -24,7 +27,6 @@ import * as ui from "./coisas/Ui.js"
 // nota: esse módulo não é público!!!!!!!!
 // usar o dummy abaixo para rodar o jogo localmente.
 // import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
-
 // import {
 //   LEADERBOARD_API_KEY,
 //   LEADERBOARD_URL,
@@ -35,12 +37,11 @@ const LEADERBOARD_API_KEY = "qualquer coisa"
 const LEADERBOARD_URL = "qualquer coisa"
 const LEADERBOARD_GAME_ID = "qualquer coisa"
 
-// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
+//// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
+
 const leaderboard = {
   meu_score:0,
-  meu_nome:"",
   getPlayerId(url,playerName){
-    this.meu_nome = "jogando local"
     return new Promise ( (resolve, _)=>{
       resolve({
         playerName : playerName,
@@ -48,16 +49,24 @@ const leaderboard = {
       })
     })
   },
-  submitScore(bla,blabla,{playerName,score}){
+  /**
+   * @param {string} bla
+   * @param {string} blabla
+   */
+  submitScore(bla,blabla,{gameId,score}){
     this.meu_score=score
     return new Promise( (resolve,reject) => resolve() )
   },
+  /**
+   * @param {string} url
+   * @param {string} gameId
+   */
   getLeaderboard(url,gameId){
     return [
       {place : 1, player_name : "El Gato", total_score : 1000},
       {place : 2, player_name : "El Gato", total_score : 1000},
       {place : 3, player_name : "El Gato", total_score : 1000},
-      {place : 9999, player_name : "jogando local", total_score : this.meu_score},
+      {place : 9999, player_name : "jogando local", total_score : this.meu_score, you : true},
     ]
   }
 }
@@ -67,11 +76,11 @@ import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
 import { Camera } from "./coisas/Camera.js"
 import * as tresD from "./coisas/TresDe.js"
-import { dist2d, fazer, vec2_angle, vec2_sub } from "./coisas/util.js"
+import { dist2d, fazer, vec2_angle, vec2_dp, vec2_add, vec2_mul, vec2_sub } from "./coisas/util.js"
 
 const game = {
-  /** @type { Camera? } */
-  camera : undefined,
+  /** @type { Camera } */
+  camera : new Camera(SCREEN_WIDTH,SCREEN_HEIGHT),
   /** @type { Carro? } */
   carro : undefined,
   /** @type { RoadSegment? } */
@@ -87,6 +96,14 @@ const game = {
   /** @type { HTMLCanvasElement? } */
   canvas: undefined,
 
+  // contador de frames pra coisas aleatórias
+  frames :0,
+
+  // contador de frames de drifting. não serve pra nada!
+  driftHysteresis:0,
+  driftLength:0,
+
+  tutorial : false,
   valendo : false,
   framesAteValer : 60,
   gasolina : GAME_GASOLINA_INICIAL,
@@ -107,7 +124,8 @@ const game = {
     this.gasolina = GAME_GASOLINA_INICIAL
     this.framesParado = 0
     this.carroExplodiu = false
-
+    this.driftHysteresis=0,
+    this.driftLength=0,
     this.camera.zoom = 10
   }
 }
@@ -117,7 +135,7 @@ function estradaInicial(){
   for(let i = 0; i < 7; i ++){
     parts.push({
       radius : (2 + (Math.random()*10)|0)*20,
-      to : (Math.random()-0.5)*0.4
+      to : (Math.random()-0.5)*0.2
     })
   }
   return parts  
@@ -128,36 +146,41 @@ function initGame(){
   if(maiorDistanciaSalva !== null){
     game.maiorDistancia = parseFloat( maiorDistanciaSalva )
   }
-  tresD.resetarCarro()
-  game.carro = new Carro({})
-  game.camera = new Camera(SCREEN_WIDTH,SCREEN_HEIGHT)
+  tresD.clearRoad()
+  game.carro = new Carro()
   game.reset()
   game.firstSegment = game.road = new RoadSegment({
     center: [0,0],
     radius: 30,
     from  : 0,
-    to    : -0.5,
-    width : 10
+    to    : -0.2,
+    width : 10,
+    prev : undefined
   })
   let parts = estradaInicial()
 
-  let segment = game.road
-  let i = 0
+  let segment = game.road, i = 0
+  let startingPosition = [0,0]
   while( parts.length > 0){
     i++
     segment = segment.continue( parts.pop() )
     // o quarto pedacinho é o que vai fazer a estrada crescer
     // quando a gente chegar nele.
-    if(i==1){
-      game.carro.position = segment.startPoint
+    if(i==2){
+      startingPosition = vec2_mul( vec2_add( segment.startPoint, segment.clockwise ? segment.startPointRight : segment.startPointLeft ), 0.5 )
       game.carro.heading = (segment.from + (segment.clockwise ? 0.5 : -0.5)) * Math.PI
     }
     if(i==5)
       game.targetSegment=segment
+    tresD.addRoadSegment( segment )
   }
 
   game.lastSegment = segment
-  game.camera.setPos( game.road.endPoint )
+  game.carro.position = startingPosition
+  game.camera.setPos( startingPosition )
+
+  // gera o mesh da rua...
+  
 }
 
 const keyboard = {
@@ -178,18 +201,21 @@ const keyboard = {
 
 async function mandarHighScore(){
   // primeiro a gente salva só localmente
+  let vouMandar=false
   if(game.distancia > game.maiorDistancia){
     game.maiorDistancia = game.distancia
-  }else{
-    // a pessoa não se superou o bastante.
-    return
+    vouMandar = true
   }
   localStorage.setItem("maiorDistancia", game.maiorDistancia)
   // sim, isso vai ter um comportamento bizarro se o servidor não responder.
   // por sorte, o cloudflare é bem rápido.
   // depois a gente manda pro leaderboard, que na verdade ignora esse valor salvo.
+  // tem que demorar uns 2 segundos e depois mostrar a tabela.
+  // se a pessoa reiniciar antes disso, não mostra.
   try{
-    await leaderboard.submitScore(LEADERBOARD_URL, LEADERBOARD_API_KEY, { gameId: LEADERBOARD_GAME_ID, score: game.distancia})
+    if(vouMandar){
+      await leaderboard.submitScore(LEADERBOARD_URL, LEADERBOARD_API_KEY, { gameId: LEADERBOARD_GAME_ID, score: game.distancia})
+    }
     const placar = await leaderboard.getLeaderboard(LEADERBOARD_URL, LEADERBOARD_GAME_ID)
     // placar é assim:
     // [{
@@ -201,8 +227,8 @@ async function mandarHighScore(){
     let medalha = ["", "🥇", "🥈","🥉"];
     let html = "<tr><td>#</td><td></td><td></td></tr>"
     $("tb_Leaderboard").innerHTML = ""
-    for(let {place,player_name,total_score} of placar){
-      html += `<tr><td>${place+(medalha[place] ?? "")}</td><td>${player_name}</td><td>${(parseFloat(total_score)/1000).toFixed(2)}km</td></tr>`
+    for(let {place,player_name,total_score,you} of placar){
+      html += `<tr${you ? ' class="table-info"' : ""}><td>${place+(medalha[place] ?? "")}</td><td>${player_name}</td><td>${(parseFloat(total_score)/1000).toFixed(2)}km</td></tr>`
     }
     $("tb_Leaderboard").innerHTML = html  
   }catch(e){
@@ -210,22 +236,19 @@ async function mandarHighScore(){
   }
 }
 
-function tick(){
-  const ctx = game.ctx
-  const {camera,carro, road, targetSegment} = game
+function game_step(game){
 
-  ctx.clearRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
+  const {ctx,camera,carro, road, targetSegment} = game
 
-  if(keyboard.hit("r")){
-    $("leaderboard").hide()
-    initGame()
-  }
+  const {screenWidth,screenHeight} = camera
+
   carro.input.left = keyboard.a ? 1 : 0
   carro.input.right = keyboard.d ? 1 : 0
   carro.input.throttle = keyboard.w ? 1 : 0
   carro.input.brake = keyboard.s ? 1 : 0
   carro.input.eBrake = keyboard.m ? 1 : 0
 
+  // guzzuloine
   game.gasolina -= 0.08 * carro.input.throttle
   if(game.gasolina <= 0){
     carro.input.throttle = 0
@@ -233,49 +256,48 @@ function tick(){
     game.gasolina = 0
   }
 
-  camera.lookAt( carro.position )
-  camera.zoom = (-carro.absVel / 100 )*10 + 10
-  
   // carro explodiu
   if(!game.carroExplodiu){
     carro.update(0.016) // 1 frame em segundos
   }
 
-  // faz a pista crescer
-  let endPoint = targetSegment.endPoint
+  // faz a camera olhar o carro.
+  camera.lookAt( carro.position )
+  camera.zoom = (-carro.absVel / 100 )*10 + 10
 
+  // faz a pista crescer quando chega no tanque.
+  let endPoint = targetSegment.endPoint
   const distToTarget = dist2d(endPoint, carro.position)
   if(distToTarget <= game.road.width*0.5){
     game.distancia += game.targetSegment.length    
     // tira um do começo
     game.road = road.next
     game.targetSegment = game.targetSegment.next
-
+    tresD.removeRoadStart()
     // põe mais um no fim
     game.lastSegment = game.lastSegment.continue({
       radius : (2 + (Math.random()*10)|0)*20,
       to : (Math.random()-0.5)
     })
 
+    tresD.addRoadSegment(game.lastSegment)
+
     // aumenta a gasolina
     game.gasolina = Math.min(GAME_GASOLINA_INICIAL, game.gasolina + 30)
   }
-
-  game.road.draw(ctx, game.camera)
-  // carro.draw(ctx, camera)
-
-  ctx.fillText( "⛽", ...camera.translate(targetSegment.endPoint ))
+  const endpointProjetado = tresD.projetar(targetSegment.endPoint, camera.screenWidth, camera.screenHeight)
+  ctx.fillText( "⛽", endpointProjetado[0], endpointProjetado[1])
   if(distToTarget > 20){
     let angulo =  vec2_angle( vec2_sub( endPoint, carro.position ) ) // Math.atan2( dY, dX )
     ui.indicadorPalhaco(ctx,
-      SCREEN_WIDTH/2 + Math.cos(angulo)*50,
-      SCREEN_HEIGHT/2 + Math.sin(angulo)*50,
+      screenWidth/2 + Math.cos(angulo)*50,
+      screenHeight/2 + Math.sin(angulo)*50,
       angulo
     ) 
   }
   let lentoDemais = false
   // tempo que a pessoa pode ficar parada.
-  if(!game.valendo && --game.framesAteValer == 0)
+  if(!game.valendo && --game.framesAteValer == 0 && !game.tutorial)
     game.valendo = true
   
   if(game.valendo){
@@ -299,6 +321,30 @@ function tick(){
         game.gasolina=0
       }
     }  
+
+
+    // drifting
+    if(Math.abs(carro.velocity_c[1]) > Math.abs(carro.velocity_c[0]*0.3)){
+      if(game.driftHysteresis < 60){
+        game.driftHysteresis += 1
+      }
+      if(game.driftHysteresis >= 3){
+        game.drifting = true
+      }
+    }else{
+      if(game.driftHysteresis > 0){
+        game.driftHysteresis -= 0.75
+      }
+      if(game.driftHysteresis <= 0){
+        game.drifting = 0
+        game.driftLength = 0
+      }
+    }
+    if(game.drifting){
+      game.driftLength += carro.absVel * 0.016
+    }
+
+    // a gente tá misturando operação de desenho onde não é pra ter operação de desenho.
     ctx.save()
     ctx.font = "20px monospace"
     ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 40)
@@ -308,72 +354,104 @@ function tick(){
     }
     ctx.restore()
   }
+
+  ui.velocimetro(ctx, 40, screenHeight-40, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
+  ui.medidorDeGasolina(ctx, 90, screenHeight-40, game.gasolina)
+  if(lentoDemais)
+    ui.mostrarBomba(ctx,screenWidth/2,screenHeight/2-60,(GAME_TEMPO_MAXIMO_PARADO - (game.framesParado/60)).toFixed(2))   
+}
+
+function tick(){
+  game.frames++
+  const ctx = game.ctx
+  const {camera,carro, road, targetSegment} = game
+  const {screenWidth,screenHeight} = camera
+
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
+
+  if(keyboard.hit("r")){
+    $("leaderboard").hide()
+    tresD.resetarCarro()
+    initGame()
+  }
+
+  // game.road.draw(ctx, game.camera)
+
+  game_step(game)
+
+  // carro.draw(ctx, camera)
+
   // NOTA: o carro 3D está em um espaço diferente.
-  tresD.girarCarro(carro.heading)
+  tresD.posicionarCarro(carro.position[0],carro.position[1],carro.heading)
   tresD.setZoom(camera.zoom)
   tresD.renderizar3D()
 
-  ui.velocimetro(ctx, 40, SCREEN_HEIGHT-40, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
-  ui.medidorDeGasolina(ctx, 90, SCREEN_HEIGHT-40, game.gasolina)
+  // indicador de drift
 
-  if(lentoDemais)
-    ui.mostrarBomba(ctx,SCREEN_WIDTH/2,SCREEN_HEIGHT/2-60,(GAME_TEMPO_MAXIMO_PARADO - (game.framesParado/60)).toFixed(2))   
+  if( game.driftLength > 0 ){
+    ctx.save()
+    ctx.textAlign="center"
+    ctx.textBaseline="bottom"
+    ctx.translate(screenWidth/2,screenHeight*0.25)
+    const s = 1 + Math.abs(Math.cos(game.frames*0.2)*0.25)
+    ctx.scale(s,s)
+    ctx.fillText("DRIFTING!",0,0)
+    ctx.fillText(game.driftLength.toFixed(2),0,20)
+    ctx.restore()
+  }
+
+  ctx.strokeStyle = "lime"
+  ctx.beginPath()
+  ctx.moveTo( ...camera.translate(carro.position) )
+  ctx.lineTo( ...camera.translate(vec2_sub(carro.position, carro.velocity_c)))
+  ctx.stroke()
 
   requestAnimationFrame( tick )
 }
 
+
 // A gente tem que dar um jeito de deixar isso bonito no celular também.
 document.addEventListener("DOMContentLoaded", function (event) {
+    /** @ts-expect-error */
     game.canvas = $("myCanvas");
-
-    game.canvas.width = SCREEN_WIDTH
-    game.canvas.height = SCREEN_HEIGHT
-
     /** @type {CanvasRenderingContext2D} */
     game.ctx = game.canvas.getContext("2d");
-    game.ctx.font = "14px serif";
+    
 
-    tresD.init3D(game.canvas)
-    initInput()
-    initGame()
-    tick()
-});
-
-function initInput(){
-  let touchX, oldTouchX
-  document.addEventListener("touchstart", function(event){
-    oldTouchX = touchX = event.touches[0].clientX
-    keyboard.w = true
-  })
-  document.addEventListener("touchmove", function(event){
-    event.preventDefault()
-    oldTouchX = touchX
-    touchX = event.touches[0].clientX
-    a = touchX - oldTouchX
-    if(Math.abs(touchX - oldTouchX) > 0.5){
-      if(touchX > oldTouchX){
-        keyboard.d = true
-        keyboard.a = false
+    function fitCanvas(){
+      // idealmente a gente tem que limpar camera...
+      game.ctx.clearRect(0,0,game.canvas.width,game.canvas.height)
+      const {height,width} = document.body.getBoundingClientRect()
+      if(height > width){
+        console.log("retrato")
+        game.camera.screenWidth = SCREEN_WIDTH
+        game.camera.screenHeight = SCREEN_WIDTH * (height/width)
       }else{
-        keyboard.a = true
-        keyboard.d = false
-      }  
-    }else{
-      keyboard.a = false
-      keyboard.d = false
+        console.log("paisagem")
+        game.camera.screenHeight = SCREEN_HEIGHT
+        game.camera.screenWidth = SCREEN_HEIGHT * (width/height)
+      }
+      game.canvas.width = game.camera.screenWidth
+      game.canvas.height = game.camera.screenHeight
+
+      console.log("ficou assim: ", game.canvas.width, game.canvas.height)
     }
-  })
-  document.addEventListener("touchend", function(event){
-    keyboard.w = false
-    keyboard.a = false
-    keyboard.d = false
-    keyboard.s = false
-  })
-  document.onkeydown = ({key}) => keyboard[ key ] = true
-  document.onkeyup = ({key}) => keyboard[ key ] = false
-  // perguntar o nome se a pessoa nunca jogou
-  fazer("ver_o_manual").uma_so_vez(
+
+    window.addEventListener("resize", event =>{
+      fitCanvas()
+      tresD.handleResize(game.canvas)
+    })
+
+
+
+    initInput()
+    // se a pessoa nunca jogou:
+    // - mostra o manual
+    // - deixa a pessoa dirigir sem valer
+    // - pergunta o nome
+    fazer("ver_o_manual").uma_so_vez(
       ok =>{
+        game.tutorial=true
         $("manual").show()
         $("btn_hideManual").onclick = ()=>{
           $("manual").hide()
@@ -395,10 +473,25 @@ function initInput(){
             erro => console.log("não pude obter identidade porque: ", erro)
           )
           $("playerName").hide()
+          game.tutorial=false
+          initGame()
           ok()
         }
       }
-  )
+    )
+    
+    
+    fitCanvas()
+    tresD.init(game.canvas)
+    initGame()
+    
+    tick()
+});
+
+function initInput(){
+  // TODO: fazer os controles de toque!
+  document.onkeydown = ({key}) => keyboard[ key ] = true
+  document.onkeyup = ({key}) => keyboard[ key ] = false
 }
 
 export { Camera }

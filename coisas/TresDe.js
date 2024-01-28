@@ -16,7 +16,12 @@ import {
     InstancedMesh,
     AdditiveBlending,
     MultiplyBlending,
-    MeshBasicMaterial
+    MeshBasicMaterial,
+    BufferGeometry,
+    BufferAttribute,
+    BackSide,
+    DoubleSide,
+    FrontSide
 } from 'three'
 import {
     GLTFLoader 
@@ -24,6 +29,7 @@ import {
 
 import carro_mesh from './carro_mesh';
 import { PointLight } from 'three'
+import { RoadSegment } from './RoadSegment';
 
 /** @interface */
 class Particula{
@@ -103,7 +109,10 @@ class Fumaca{
 
 let cena = {
     /** @type {Mesh?} */
-    carro : undefined,
+    carro : undefined, // isso é só o centro do carro.
+
+    /** @type {Mesh?} */
+    carroBody : undefined, // isso é o modelo.
 
     /** @type {WebGLRenderer?} */
     renderer : undefined,
@@ -116,6 +125,9 @@ let cena = {
 
     /** @type {Particula[]} */
     particulas : [],
+
+    /** @type {Object3D[]} */
+    road: [],
 
     /**
      * 
@@ -133,34 +145,34 @@ let cena = {
 const loader = new GLTFLoader()
 
 /**
+ * Faz o three.js ficar na proporção certa pra ficar responsável
+ * @param {HTMLCanvasElement} element 
+ */
+export function handleResize(element){
+    console.log("redimensionar o tresde1 pra ficar biito")
+    const {width,height} = element.getBoundingClientRect()
+    cena.renderer.setSize(width,height)
+    cena.renderer.setPixelRatio(element.height / height)
+    cena.camera.aspect = width/height
+    cena.camera.updateProjectionMatrix()
+    console.log(cena.camera.aspect)
+}
+
+/**
  * 
  * @param {HTMLCanvasElement} element 
  */
-function init3D(element){
-
+export function init(element){
     const rect = element.getBoundingClientRect()
     cena.renderer = new WebGLRenderer({
         alpha: true,
         antialias: false,
     })
-    cena.renderer.setSize( element.width, element.height )
-    cena.renderer.setPixelRatio(window.devicePixelRatio)
+    cena.renderer.setSize( rect.width, rect.height )
+    cena.renderer.setPixelRatio(element.height /rect.height)
     let r = cena.renderer.domElement
 
     r.className = "tresDe"
-    r.style.left = rect.left + "px"
-    r.style.top = rect.top + "px"
-    r.style.width = rect.width + "px"
-    r.style.height = rect.height + "Px"
-
-    window.addEventListener("resize", event=>{
-        const rect = element.getBoundingClientRect()
-        r.style.left = rect.left + "px"
-        r.style.top = rect.top + "px"
-        r.style.width = rect.width + "px"
-        r.style.height = rect.height + "Px"
-    })
-
     document.body.appendChild( r )
 
     cena.scene = new Scene()
@@ -188,11 +200,10 @@ function init3D(element){
     // const geometry = new BoxGeometry( 1, 0.4, 0.4)
     // const material = new MeshStandardMaterial({ color : 0x00FF00 })
 
-    
-
     loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
-        scene.rotation.y = Math.PI*0.5
-        scene.scale.set(0.5,0.5,0.5)
+        // scene.scale.set(0.5,0.5,0.5)
+        scene.position.y = 0.2
+        cena.carroBody = scene
         cena.carro.add(scene)
     })
 
@@ -206,19 +217,23 @@ function init3D(element){
     cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
 
+    cena.carro.add( cena.camera )
+
     cena.camera.position.z = 3
     cena.camera.position.y = 3
     cena.camera.lookAt(new Vector3(0,0,0))
 }
 
 // como o carro vai ser só um mesh "estático", isso é aceitável.
-function girarCarro( angulo ){
-    cena.carro.rotation.y = -(((angulo*16)|0)/16)
+export function posicionarCarro( x,y, angulo ){
+    cena.carro.position.set(x,0,y)
+    if(cena.carroBody){
+        cena.carroBody.rotation.y = -(((angulo*16)|0)/16) + Math.PI*0.5
+    }
 }
 
-function resetarCarro(){
+export function resetarCarro(){
     // limpar as explosões...
-    cena.renderer.clear()
     for(let p of cena.particulas){
         cena.scene.remove(p.object)
     }
@@ -227,18 +242,19 @@ function resetarCarro(){
     cena.carro.visible=true
 }
 
-function explodirCarro(){
+export function explodirCarro(){
+    let {x,z} = cena.carro.position
     let particulas = [
-        new Explosao(0,0,0),
+        new Explosao(x,0,z),
     ]    
     let spreadX = 1.2
     let spreadZ = 1
     for(let i = 0; i < 10; i++){
         particulas.push(
             new Fumaca(
-                spreadX * (Math.random() -0.5),
+                x + spreadX * (Math.random() -0.5),
                 0.1,
-                spreadZ * (Math.random() -0.5)
+                z + spreadZ * (Math.random() -0.5)
             )
         )
     }
@@ -248,7 +264,7 @@ function explodirCarro(){
     cena.carro.visible=false
 }
 
-function renderizar3D(){
+export function renderizar3D(){
     cena.renderer.clear()
     // atualizar as explosões...
     let particulas = []
@@ -264,17 +280,61 @@ function renderizar3D(){
     cena.renderer.render( cena.scene, cena.camera )
 }
 
-function setZoom(zoom){
-    cena.camera.position.z = 2 + (1- zoom/12)*7
-    cena.camera.position.y = 2 + (1- zoom/12)*7
+export function setZoom(zoom){
+    cena.camera.position.z = 5 + (1- zoom/12)*12
+    cena.camera.position.y = 5 + (1- zoom/12)*12
     // cena.camera.lookAt(new Vector3(0,0,0))
 }
 
-export {
-    init3D,
-    girarCarro,
-    renderizar3D,
-    setZoom,
-    resetarCarro,
-    explodirCarro
+
+const matEstradaEscura = new MeshBasicMaterial({color:0x777777})
+const matEstradaClara = new MeshBasicMaterial({color:0x888888})
+
+/**
+ * Adiciona um segmento de rua no 3D...
+ * @param {RoadSegment} segment 
+ */
+export function addRoadSegment(segment){
+    const {vertices,indices} = segment.generateVertexBuffer()
+
+    const geometry = new BufferGeometry()
+    const verticesArray = new Float32Array(vertices)
+    geometry
+        .setIndex( indices )
+        .setAttribute('position', new BufferAttribute(verticesArray,3))
+
+    // // usa um material de rua...
+    const mesh = new Mesh(geometry, segment.clockwise ? matEstradaClara : matEstradaEscura)
+
+    const trecho = {
+        object : mesh,
+        geometry : geometry
+    }
+
+    cena.scene.add( trecho.object )
+    cena.road.push( trecho )
+
+    console.log(vertices)
+}
+
+// não consegui pensar em um jeito melhor de fazer isso.
+export function removeRoadStart(){
+    let trecho = cena.road.shift()
+    if(trecho){
+        cena.scene.remove(trecho.object)
+        trecho.geometry.dispose()
+    }
+}
+
+export function clearRoad(){
+    for(let segment of cena.road){
+        cena.scene.remove( segment.object )
+    }
+}
+
+// faz exatamente o que parece.
+export function projetar([x,y], width,height){
+    const ponto = new Vector3(x,0,y)
+    const projetado = ponto.project( cena.camera )
+    return [(projetado.x+1)*0.5*width, (1-projetado.y)*0.5*height]
 }

@@ -16,7 +16,6 @@ export function medidorDeGasolina(ctx, x,y, gasolina){
     ctx.restore()
   }
 
-
   /**
  * 
  * @param {CanvasRenderingContext2D} ctx 

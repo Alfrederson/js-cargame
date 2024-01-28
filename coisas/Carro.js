@@ -15,7 +15,7 @@ import { clamp, vec2_len } from "./util"
  * @property {number} [cgHeight]
  * @property {number} [wheelRadius]
  * @property {number} [wheelWidth]
- * @property {number} [tireGrip]
+ * @property {number} [tireGrip] - normal é 2.0
  * @property {number} [lockGrip] - entre 0.01 e 1.0
  * @property {number} [engineForce]
  * @property {number} [brakeForce]
@@ -143,12 +143,12 @@ class Carro {
     }
 
     /**
-     * @param {CarroConfigOptions} config 
+     * @param {CarroConfigOptions} [config] 
      */
     constructor(config){
         
-        if(!config)
-            throw "cade o config?"
+        // if(!config)
+        //     throw "cade o config?"
 
         this.config = CarroConfig(config)
 

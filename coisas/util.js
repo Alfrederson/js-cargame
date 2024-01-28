@@ -24,6 +24,34 @@ export function vec2_sub( v1, v2 ){
 }
 
 /**
+ * escala um vetor
+ * @param {number[]} v1 
+ * @param {number} m 
+ * @returns 
+ */
+export function vec2_mul( v1, m ){
+    return [
+        v1[0] *m,
+        v1[1] *m
+    ]
+}
+
+
+/**
+ * faz v1 + v2
+ * @param {number[]} v1 
+ * @param {number[]} v2 
+ * @returns 
+ */
+export function vec2_add( v1, v2 ){
+    return [
+        v1[0] + v2[0],
+        v1[1] + v2[1]
+    ]
+}
+
+
+/**
  * Dá o angulo (em radianos) que corresponde ao sentido de um vetor.
  * @param {number[]} v 
  * @returns 
@@ -49,6 +77,10 @@ export function vec2_len(vec){
     return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1])
 }
 
+export function vec2_dp(v1,v2){
+    return v1[0]*v2[0] + v1[1]*v2[1]
+}
+
 export function sequencia( ...passos ){
     let promise
     for(let i = 0; i < passos.length; i++){
@@ -66,6 +98,7 @@ export function sequencia( ...passos ){
             )
         }
     }
+    promise.senao = ()=>{}
     return promise
 }
 
@@ -82,9 +115,11 @@ export function fazer( chave ){
             uma_so_vez : sequencia
         }
     }
-    // faz nada.
+    // retorna uma coisa que faz um "senão."
     return {
-        uma_so_vez : function(){}
+        uma_so_vez : function(){
+            return { senao : callback => callback() }
+        }
     }
 }
 

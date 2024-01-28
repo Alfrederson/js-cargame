@@ -33,22 +33,27 @@
             height:100%;
             margin-left: auto;
             margin-right:auto;
+            z-index:5;
         }
         .porta-texto{
             position: fixed;
             padding: 6em;
         }
         #myCanvas{
-            max-width: 100%;
-            height: 100%;
-            background-color: none;            
+            width: 100%;
+            height: 100%;            
             image-rendering: pixelated;
+            border:1px solid lime;
+            object-fit: contain;
+            z-index:2
         }
         .tresDe{
             margin-left:auto;
             margin-right:auto;
             position: absolute;
             image-rendering: pixelated;
+            border:1px solid fuchsia;
+            z-index:1;
         }
         .leaderboard{
             position:fixed;
@@ -81,7 +86,7 @@
 </head>
     <body>    
         <div class="porta-canvas">
-            <canvas id="myCanvas" width="600" height="600" ></canvas>
+            <canvas id="myCanvas"></canvas>
         </div>        
         <div class="overlay">
             <div class="container py-5 hidden" id="manual">
@@ -95,7 +100,7 @@
                             <li><kbd>m</kbd> freio de mão/emergency brake</li>
                             <li><kbd>r</kbd> resetar/try again</li>
                         </ul>
-                        <button class="btn form-control" id="btn_hideManual">click 🤡</button>            
+                        <button class="btn form-control" id="btn_hideManual">ok!</button>            
                     </div>    
                 </div>
             </div>
