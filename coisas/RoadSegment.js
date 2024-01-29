@@ -1,5 +1,5 @@
 const EDGE_LENGTH = 12
-const WAYPOINT_SPACING = 8
+const WAYPOINT_SPACING = 4
 
 
 class RoadSegment{
@@ -23,9 +23,14 @@ class RoadSegment{
   
     clockwise = true
 
+    /** gera uma lista de quadrados....? */
     generateVertexBuffer(){
+      const faces = []
+
+
       const vertices = []
       const indices = []
+      const uvs = []
       const vertexCount = Math.max(2, (this.length / EDGE_LENGTH)|0)
       const angleIncrement = this.to / vertexCount
       /*
@@ -46,40 +51,60 @@ class RoadSegment{
           a resolução é um leetcode nível fácil.
       */
       // vai fazendo o lado esquerdo
+
+
+
+
       const [x,y] = this.center
+      let v=0
       for(let i = 0; i <= vertexCount; i++){
+        uvs.push(0,i*1)
         vertices.push(x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2))
         vertices.push(0)
         vertices.push(y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2))
       }
-      // agora o direito
-      for(let i = vertexCount; i >= 0; i--){
+      // agora o direitor
+      for(let i=vertexCount; i >= 0; i--){
+        uvs.push(1,i)
         vertices.push(x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2))
         vertices.push(0)
         vertices.push(y + Math.sin( (this.from + angleIncrement * i) * Math.PI) * (this.radius + this.width/2))
       }
+      /*
+          0,1 ------------ 1,1
+           |                |
+           |                |
+           |                |
+           |                |
+           |                |
+           |                |
+          0,0 ------------ 1,0
+      */
       for(let i = 0; i < vertexCount; i ++){
+        // canto esquerdo de baixo
         if(this.clockwise){
           // triangulo da esquerda
           indices.push(i)
           indices.push(i+1)
           indices.push(vertexCount*2-i+1)
-          // triangulo da direita
+
           indices.push(vertexCount*2-i+1)
           indices.push(i+1)
-          indices.push(vertexCount*2-i)
+          indices.push(vertexCount*2-i)      
+          
+             
         }else{
-          // triangulo da esquerda
+          // triangulo da direita
+          indices.push(i+1)
+          indices.push(vertexCount*2-i+1)
+          indices.push(vertexCount*2-i)                    
+
           indices.push(vertexCount*2-i+1)
           indices.push(i+1)
           indices.push(i)
-          // triangulo da direita
-          indices.push(vertexCount*2-i)
-          indices.push(i+1)
-          indices.push(vertexCount*2-i+1)
         }
       }
-      return {vertices, indices}
+      return {vertices, indices, uvs}
     }
 
     generateVertices(){

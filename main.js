@@ -99,6 +99,8 @@ const game = {
   // contador de frames pra coisas aleatórias
   frames :0,
 
+  distToTarget : 0,
+
   // contador de frames de drifting. não serve pra nada!
   driftHysteresis:0,
   driftLength:0,
@@ -267,8 +269,8 @@ function game_step(game){
 
   // faz a pista crescer quando chega no tanque.
   let endPoint = targetSegment.endPoint
-  const distToTarget = dist2d(endPoint, carro.position)
-  if(distToTarget <= game.road.width*0.5){
+  game.distToTarget = dist2d(endPoint, carro.position)
+  if(game.distToTarget <= game.road.width*0.5){
     game.distancia += game.targetSegment.length    
     // tira um do começo
     game.road = road.next
@@ -285,16 +287,7 @@ function game_step(game){
     // aumenta a gasolina
     game.gasolina = Math.min(GAME_GASOLINA_INICIAL, game.gasolina + 30)
   }
-  const endpointProjetado = tresD.projetar(targetSegment.endPoint, camera.screenWidth, camera.screenHeight)
-  ctx.fillText( "⛽", endpointProjetado[0], endpointProjetado[1])
-  if(distToTarget > 20){
-    let angulo =  vec2_angle( vec2_sub( endPoint, carro.position ) ) // Math.atan2( dY, dX )
-    ui.indicadorPalhaco(ctx,
-      screenWidth/2 + Math.cos(angulo)*50,
-      screenHeight/2 + Math.sin(angulo)*50,
-      angulo
-    ) 
-  }
+  
   let lentoDemais = false
   // tempo que a pessoa pode ficar parada.
   if(!game.valendo && --game.framesAteValer == 0 && !game.tutorial)
@@ -346,17 +339,17 @@ function game_step(game){
 
     // a gente tá misturando operação de desenho onde não é pra ter operação de desenho.
     ctx.save()
-    ctx.font = "20px monospace"
+    ctx.font = "32px monospace"
     ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 40)
     if(game.maiorDistancia){
-      ctx.font = "12px monospace"
-      ctx.fillText((game.maiorDistancia/1000).toFixed(2)+"km", 20, 60)
+      ctx.font = "24px monospace"
+      ctx.fillText((Math.max(game.distancia,game.maiorDistancia)/1000).toFixed(2)+"km", 20, 60)
     }
     ctx.restore()
   }
 
-  ui.velocimetro(ctx, 40, screenHeight-40, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
-  ui.medidorDeGasolina(ctx, 90, screenHeight-40, game.gasolina)
+  ui.velocimetro(ctx, 80, screenHeight-60, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
+  ui.medidorDeGasolina(ctx, 160, screenHeight-8, game.gasolina)
   if(lentoDemais)
     ui.mostrarBomba(ctx,screenWidth/2,screenHeight/2-60,(GAME_TEMPO_MAXIMO_PARADO - (game.framesParado/60)).toFixed(2))   
 }
@@ -366,7 +359,6 @@ function tick(){
   const ctx = game.ctx
   const {camera,carro, road, targetSegment} = game
   const {screenWidth,screenHeight} = camera
-
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
 
   if(keyboard.hit("r")){
@@ -378,6 +370,21 @@ function tick(){
   // game.road.draw(ctx, game.camera)
 
   game_step(game)
+  const endPoint = targetSegment.endPoint
+  const endpointProjetado = tresD.projetar(endPoint, camera.screenWidth, camera.screenHeight)
+  ctx.save()
+  ctx.translate(endpointProjetado[0],endpointProjetado[1])
+  ctx.scale(2,2)
+  ctx.fillText( "⛽", 0, 0)
+  ctx.restore()
+  if(game.distToTarget > 20){
+    let angulo =  vec2_angle( vec2_sub( endPoint, carro.position ) ) // Math.atan2( dY, dX )
+    ui.indicadorPalhaco(ctx,
+      screenWidth/2,
+      screenHeight/2,
+      angulo
+    ) 
+  }
 
   // carro.draw(ctx, camera)
 
@@ -392,19 +399,13 @@ function tick(){
     ctx.save()
     ctx.textAlign="center"
     ctx.textBaseline="bottom"
-    ctx.translate(screenWidth/2,screenHeight*0.25)
-    const s = 1 + Math.abs(Math.cos(game.frames*0.2)*0.25)
+    ctx.translate(screenWidth*0.5,screenHeight*0.25)
+    const s = 2 + Math.abs(Math.cos(game.frames*0.2)*0.25)
     ctx.scale(s,s)
     ctx.fillText("DRIFTING!",0,0)
     ctx.fillText(game.driftLength.toFixed(2),0,20)
     ctx.restore()
   }
-
-  ctx.strokeStyle = "lime"
-  ctx.beginPath()
-  ctx.moveTo( ...camera.translate(carro.position) )
-  ctx.lineTo( ...camera.translate(vec2_sub(carro.position, carro.velocity_c)))
-  ctx.stroke()
 
   requestAnimationFrame( tick )
 }

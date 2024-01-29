@@ -21,7 +21,10 @@ import {
     BufferAttribute,
     BackSide,
     DoubleSide,
-    FrontSide
+    FrontSide,
+    TextureLoader,
+    NearestFilter,
+    RepeatWrapping
 } from 'three'
 import {
     GLTFLoader 
@@ -55,7 +58,7 @@ class Explosao{
         })
         this.object = new Mesh(bola, material)
         this.object.position.set(x,y,z)
-        this.scale = 1.5
+        this.scale = 3
     }
     tick(){
         if(this.lifeTime < 15){
@@ -74,7 +77,7 @@ class Fumaca{
     /** @type {Object3D} */
     object = undefined
     finished = false
-    scale = 0.2
+    scale = 0.4
     lifeTime = 0
     sY = 0
     constructor(x,y,z){
@@ -106,8 +109,12 @@ class Fumaca{
     }    
 }
 
-
 let cena = {
+
+    matEstrada : new MeshBasicMaterial({
+        color:0xFFFFFF,
+    }),
+
     /** @type {Mesh?} */
     carro : undefined, // isso é só o centro do carro.
 
@@ -152,7 +159,7 @@ export function handleResize(element){
     console.log("redimensionar o tresde1 pra ficar biito")
     const {width,height} = element.getBoundingClientRect()
     cena.renderer.setSize(width,height)
-    cena.renderer.setPixelRatio(element.height / height)
+    cena.renderer.setPixelRatio((element.height / height)*0.5)
     cena.camera.aspect = width/height
     cena.camera.updateProjectionMatrix()
     console.log(cena.camera.aspect)
@@ -169,7 +176,7 @@ export function init(element){
         antialias: false,
     })
     cena.renderer.setSize( rect.width, rect.height )
-    cena.renderer.setPixelRatio(element.height /rect.height)
+    cena.renderer.setPixelRatio((element.height /rect.height)*0.5)
     let r = cena.renderer.domElement
 
     r.className = "tresDe"
@@ -214,13 +221,29 @@ export function init(element){
     //     cena.carro.add(scene)
     // })
 
+    // carrega a textura da rua e põe lá na rua.
+    
+    const textureLoader = new TextureLoader()
+
+    const textura = textureLoader.load("./rua.png")
+    textura.wrapS = RepeatWrapping
+    textura.wrapT = RepeatWrapping
+    textura.magFilter = NearestFilter
+    textura.minFilter = NearestFilter
+    cena.matEstrada.map = textura
+
+    // textureLoader.load("./rua.png", textura =>{
+
+        
+    // })    
+
     cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
 
     cena.carro.add( cena.camera )
 
-    cena.camera.position.z = 3
-    cena.camera.position.y = 3
+    cena.camera.position.z = 5
+    cena.camera.position.y = 5
     cena.camera.lookAt(new Vector3(0,0,0))
 }
 
@@ -228,7 +251,8 @@ export function init(element){
 export function posicionarCarro( x,y, angulo ){
     cena.carro.position.set(x,0,y)
     if(cena.carroBody){
-        cena.carroBody.rotation.y = -(((angulo*16)|0)/16) + Math.PI*0.5
+        cena.carroBody.rotation.y = -angulo + Math.PI*0.5
+        //cena.carro.rotation.y = -(((angulo*16)|0)/16) + Math.PI*0.5
     }
 }
 
@@ -283,28 +307,29 @@ export function renderizar3D(){
 export function setZoom(zoom){
     cena.camera.position.z = 5 + (1- zoom/12)*12
     cena.camera.position.y = 5 + (1- zoom/12)*12
-    // cena.camera.lookAt(new Vector3(0,0,0))
+    //cena.camera.lookAt(new Vector3(0,0,0))
 }
 
 
-const matEstradaEscura = new MeshBasicMaterial({color:0x777777})
-const matEstradaClara = new MeshBasicMaterial({color:0x888888})
+
 
 /**
  * Adiciona um segmento de rua no 3D...
  * @param {RoadSegment} segment 
  */
 export function addRoadSegment(segment){
-    const {vertices,indices} = segment.generateVertexBuffer()
+    const {vertices,indices,uvs} = segment.generateVertexBuffer()
 
     const geometry = new BufferGeometry()
     const verticesArray = new Float32Array(vertices)
+    console.log(uvs.length)
     geometry
         .setIndex( indices )
         .setAttribute('position', new BufferAttribute(verticesArray,3))
+        .setAttribute('uv',new BufferAttribute(new Float32Array(uvs),2))
 
-    // // usa um material de rua...
-    const mesh = new Mesh(geometry, segment.clockwise ? matEstradaClara : matEstradaEscura)
+    // usa um material de rua...
+    const mesh = new Mesh(geometry, cena.matEstrada)
 
     const trecho = {
         object : mesh,
@@ -313,8 +338,6 @@ export function addRoadSegment(segment){
 
     cena.scene.add( trecho.object )
     cena.road.push( trecho )
-
-    console.log(vertices)
 }
 
 // não consegui pensar em um jeito melhor de fazer isso.
