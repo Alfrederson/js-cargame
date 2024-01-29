@@ -226,45 +226,48 @@ export function init(element){
     // const geometry = new BoxGeometry( 1, 0.4, 0.4)
     // const material = new MeshStandardMaterial({ color : 0x00FF00 })
 
-    loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
+    // loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
+    //     // scene.scale.set(0.5,0.5,0.5)
+    //     scene.position.y = 0.2
+    //     cena.carroBody = scene
+    //     cena.carro.add(scene)
+    // })
+
+    // não estou usando isso aqui ainda por causa do base do vite.
+    loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
+        scene.rotation.y = Math.PI*0.5
         // scene.scale.set(0.5,0.5,0.5)
-        scene.position.y = 0.2
+        scene.scale.set(1.2,1.2,1.2)
+        console.log("done!")
+        let mat = scene.children[0].material
+        mat.map.minFilter = NearestFilter
+        mat.map.magFilter = NearestFilter
+        console.log(mat)
         cena.carroBody = scene
         cena.carro.add(scene)
     })
-
-    // não estou usando isso aqui ainda por causa do base do vite.
-    // loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
-    //     scene.rotation.y = Math.PI*0.5
-    //     scene.scale.set(0.5,0.5,0.5)
-    //     cena.carro.add(scene)
-    // })
 
     // carrega a textura da rua e põe lá na rua.
     
     const textureLoader = new TextureLoader()
 
-    const textura = textureLoader.load("./rua.png")
-    textura.wrapS = RepeatWrapping
-    textura.wrapT = RepeatWrapping
-    textura.magFilter = NearestFilter
-    textura.minFilter = NearestFilter
-    cena.mat.road.map = textura
-
-    const texturaDerrapada = textureLoader.load("./skid.png")
-    texturaDerrapada.magFilter = NearestFilter
-    texturaDerrapada.minFilter = NearestFilter
-    cena.mat.skid.map = texturaDerrapada
-    // textureLoader.load("./rua.png", textura =>{
-
-        
-    // })    
-
-
+    textureLoader.load("./rua.png", textura =>{
+        textura.wrapS = RepeatWrapping
+        textura.wrapT = RepeatWrapping
+        textura.magFilter = NearestFilter
+        textura.minFilter = NearestFilter
+        cena.mat.road.map = textura
+        cena.mat.road.needsUpdate = true
+    })
+    textureLoader.load("./skid.png", textura =>{
+        textura.magFilter = NearestFilter
+        textura.minFilter = NearestFilter
+        cena.mat.skid.map = textura
+        cena.mat.skid.needsUpdate = true
+    })
 
     cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
-
     cena.carro.add( cena.camera )
 
     cena.camera.position.z = 5
@@ -366,8 +369,8 @@ export function renderizar3D(gameState){
 }
 
 export function setZoom(zoom){
-    cena.camera.position.z = 5 + (1- zoom/12)*12
-    cena.camera.position.y = 5 + (1- zoom/12)*12
+    cena.camera.position.z = 5 + (1- zoom/12)*11
+    cena.camera.position.y = 5 + (1- zoom/12)*11
     //cena.camera.lookAt(new Vector3(0,0,0))
 }
 

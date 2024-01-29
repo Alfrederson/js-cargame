@@ -26,50 +26,50 @@ import * as ui from "./coisas/Ui.js"
 
 // nota: esse módulo não é público!!!!!!!!
 // usar o dummy abaixo para rodar o jogo localmente.
-// import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
-// import {
-//   LEADERBOARD_API_KEY,
-//   LEADERBOARD_URL,
-//   LEADERBOARD_GAME_ID
-// } from "./leaderboard.config.js"
+import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
+import {
+  LEADERBOARD_API_KEY,
+  LEADERBOARD_URL,
+  LEADERBOARD_GAME_ID
+} from "./leaderboard.config.js"
 
-const LEADERBOARD_API_KEY = "qualquer coisa"
-const LEADERBOARD_URL = "qualquer coisa"
-const LEADERBOARD_GAME_ID = "qualquer coisa"
+// const LEADERBOARD_API_KEY = "qualquer coisa"
+// const LEADERBOARD_URL = "qualquer coisa"
+// const LEADERBOARD_GAME_ID = "qualquer coisa"
 
-// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
+// // Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
 
-const leaderboard = {
-  meu_score:0,
-  getPlayerId(url,playerName){
-    return new Promise ( (resolve, _)=>{
-      resolve({
-        playerName : playerName,
-        playerId : 123456
-      })
-    })
-  },
-  /**
-   * @param {string} bla
-   * @param {string} blabla
-   */
-  submitScore(bla,blabla,{gameId,score}){
-    this.meu_score=score
-    return new Promise( (resolve,reject) => resolve() )
-  },
-  /**
-   * @param {string} url
-   * @param {string} gameId
-   */
-  getLeaderboard(url,gameId){
-    return [
-      {place : 1, player_name : "El Gato", total_score : 1000},
-      {place : 2, player_name : "El Gato", total_score : 1000},
-      {place : 3, player_name : "El Gato", total_score : 1000},
-      {place : 9999, player_name : "jogando local", total_score : this.meu_score, you : true},
-    ]
-  }
-}
+// const leaderboard = {
+//   meu_score:0,
+//   getPlayerId(url,playerName){
+//     return new Promise ( (resolve, _)=>{
+//       resolve({
+//         playerName : playerName,
+//         playerId : 123456
+//       })
+//     })
+//   },
+//   /**
+//    * @param {string} bla
+//    * @param {string} blabla
+//    */
+//   submitScore(bla,blabla,{gameId,score}){
+//     this.meu_score=score
+//     return new Promise( (resolve,reject) => resolve() )
+//   },
+//   /**
+//    * @param {string} url
+//    * @param {string} gameId
+//    */
+//   getLeaderboard(url,gameId){
+//     return [
+//       {place : 1, player_name : "El Gato", total_score : "1000"},
+//       {place : 2, player_name : "El Gato", total_score : "1000"},
+//       {place : 3, player_name : "El Gato", total_score : "1000"},
+//       {place : 9999, player_name : "jogando local", total_score : this.meu_score.toString(), you : true},
+//     ]
+//   }
+// }
 
 
 import { RoadSegment } from "./coisas/RoadSegment.js"
@@ -205,7 +205,7 @@ async function mandarHighScore(){
     game.maiorDistancia = game.distancia
     vouMandar = true
   }
-  localStorage.setItem("maiorDistancia", game.maiorDistancia)
+  localStorage.setItem("maiorDistancia", game.maiorDistancia.toString())
   // sim, isso vai ter um comportamento bizarro se o servidor não responder.
   // por sorte, o cloudflare é bem rápido.
   // depois a gente manda pro leaderboard, que na verdade ignora esse valor salvo.
@@ -337,6 +337,7 @@ function game_step(game){
     }
 
     // a gente tá misturando operação de desenho onde não é pra ter operação de desenho.
+    
     ctx.save()
     ctx.font = "48px monospace"
     ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 60)
@@ -373,6 +374,7 @@ function tick(){
   // game.road.draw(ctx, game.camera)
 
   game_step(game)
+  ctx.fillStyle ="black"
   const endPoint = targetSegment.endPoint
   const endpointProjetado = tresD.projetar(endPoint, camera.screenWidth, camera.screenHeight)
   ctx.save()
@@ -390,9 +392,6 @@ function tick(){
     ) 
   }
 
-  // carro.draw(ctx, camera)
-
-  // NOTA: o carro 3D está em um espaço diferente.
   tresD.posicionarCarro(carro.position[0],carro.position[1],carro.heading)
   tresD.setZoom(camera.zoom)
   tresD.renderizar3D()
