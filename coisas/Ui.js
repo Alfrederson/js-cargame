@@ -17,12 +17,12 @@ export function indicadorPalhaco(ctx,x,y,angulo){
   ctx.save()
   ctx.translate(x,y)
   ctx.translate(xPalhaco,yPalhaco)
-  ctx.scale(2,2)
+  ctx.scale(3,3)
   ctx.fillText("🤡",0,0)
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.translate(x,y)
   ctx.translate(xPalhaco*1.2,yPalhaco*1.2)
-  ctx.scale(2,2)
+  ctx.scale(3,3)
   ctx.rotate( angulo )
   ctx.fillText("👉",0,0)
 
@@ -66,6 +66,7 @@ export function velocimetro(ctx, x,y, velocidade, velocidadeMax, velocidadeAlvo)
   ctx.beginPath()
   ctx.moveTo(x,y)
   ctx.strokeStyle="red"
+  ctx.lineWidth=3
   ctx.lineTo(x+Math.cos(-angulo)*60,y-Math.sin(-angulo)*raio )
   ctx.fillStyle="red"
   // botar uma coisinha na velocidade alvo
@@ -99,11 +100,10 @@ let framesBomba=0
 export function mostrarBomba(ctx,x,y,segundos){
   framesBomba++
   ctx.save()
-  ctx.save()
   ctx.translate(x,y)
   ctx.textAlign="center"
   ctx.textBaseline="middle"
-  ctx.scale(2 + Math.cos(framesBomba*0.2)*0.2,2+ Math.cos(framesBomba*0.2)*0.2)
+  ctx.scale(6 + Math.cos(framesBomba*0.2)*0.2,6+ Math.cos(framesBomba*0.2)*0.2)
     ctx.fillText(
        "💣 "+segundos ,
       0,

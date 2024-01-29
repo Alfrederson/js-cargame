@@ -37,7 +37,7 @@ const LEADERBOARD_API_KEY = "qualquer coisa"
 const LEADERBOARD_URL = "qualquer coisa"
 const LEADERBOARD_GAME_ID = "qualquer coisa"
 
-//// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
+// Ignora as gambiarras. Isso é só pra conseguir rodar sem o leaderboard.
 
 const leaderboard = {
   meu_score:0,
@@ -132,16 +132,17 @@ const game = {
   }
 }
 
-function estradaInicial(){
-  const parts = []
-  for(let i = 0; i < 7; i ++){
-    parts.push({
-      radius : (2 + (Math.random()*10)|0)*20,
-      to : (Math.random()-0.5)*0.2
-    })
+function gerarTrecho(){
+  const comprimento = 40*Math.round( (1+Math.random()*9) )/10
+  const angulo = 0.4*Math.round( 1+Math.random()*9 )/10
+  const radius = comprimento/angulo
+  return {
+    radius,
+    to : Math.random() > 0.5 ? angulo : -angulo
   }
-  return parts  
 }
+
+
 
 function initGame(){
   let maiorDistanciaSalva = localStorage.getItem("maiorDistancia")
@@ -159,8 +160,7 @@ function initGame(){
     width : 10,
     prev : undefined
   })
-  let parts = estradaInicial()
-
+  let parts = Array.from({length : 8}, gerarTrecho)
   let segment = game.road, i = 0
   let startingPosition = [0,0]
   while( parts.length > 0){
@@ -191,12 +191,9 @@ const keyboard = {
     if(this[key] && !this._holding[key]){
       this._holding[key] = true
       return true
-    }else{
-      if(!this[key]){
-        this._holding[key] = false
-      }
-      return false
     }
+    this._holding[key] = this[key]
+    return false
   }
 }
 
@@ -277,10 +274,7 @@ function game_step(game){
     game.targetSegment = game.targetSegment.next
     tresD.removeRoadStart()
     // põe mais um no fim
-    game.lastSegment = game.lastSegment.continue({
-      radius : (2 + (Math.random()*10)|0)*20,
-      to : (Math.random()-0.5)
-    })
+    game.lastSegment = game.lastSegment.continue(gerarTrecho())
 
     tresD.addRoadSegment(game.lastSegment)
 
@@ -312,24 +306,29 @@ function game_step(game){
         mandarHighScore()
         game.carroExplodiu=true
         game.gasolina=0
+        $("touchControls").style.display="none"
       }
     }  
 
 
     // drifting
-    if(Math.abs(carro.velocity_c[1]) > Math.abs(carro.velocity_c[0]*0.3)){
-      if(game.driftHysteresis < 60){
+    if(Math.abs(carro.velocity_c[1]) > Math.abs(carro.velocity_c[0]*0.4)){
+      if(game.driftHysteresis < 30){
         game.driftHysteresis += 1
       }
-      if(game.driftHysteresis >= 3){
-        game.drifting = true
+      if(!game.drifting && game.driftHysteresis >= 3){
+        game.drifting=true
+        tresD.startDrifting()
       }
     }else{
       if(game.driftHysteresis > 0){
         game.driftHysteresis -= 0.75
       }
       if(game.driftHysteresis <= 0){
-        game.drifting = 0
+        if(game.drifting){
+          tresD.endDrifting()
+        }
+        game.drifting=false
         game.driftLength = 0
       }
     }
@@ -339,19 +338,25 @@ function game_step(game){
 
     // a gente tá misturando operação de desenho onde não é pra ter operação de desenho.
     ctx.save()
-    ctx.font = "32px monospace"
-    ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 40)
+    ctx.font = "48px monospace"
+    ctx.fillText((game.distancia/1000).toFixed(2)+"km", 20, 60)
     if(game.maiorDistancia){
-      ctx.font = "24px monospace"
-      ctx.fillText((Math.max(game.distancia,game.maiorDistancia)/1000).toFixed(2)+"km", 20, 60)
+      ctx.font = "36px monospace"
+      ctx.fillText((Math.max(game.distancia,game.maiorDistancia)/1000).toFixed(2)+"km", 20, 100)
     }
     ctx.restore()
   }
 
-  ui.velocimetro(ctx, 80, screenHeight-60, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
-  ui.medidorDeGasolina(ctx, 160, screenHeight-8, game.gasolina)
+  ui.velocimetro(ctx, screenWidth*0.3, screenHeight-60, carro.absVel,GAME_MAX_SPEED, game.velocidadeAlvo)
+  ui.medidorDeGasolina(ctx, screenWidth*0.3+120, screenHeight-8, game.gasolina)
   if(lentoDemais)
     ui.mostrarBomba(ctx,screenWidth/2,screenHeight/2-60,(GAME_TEMPO_MAXIMO_PARADO - (game.framesParado/60)).toFixed(2))   
+}
+
+function tentarDenovo(){
+  $("leaderboard").hide()
+  tresD.resetarCarro()
+  initGame()  
 }
 
 function tick(){
@@ -362,9 +367,7 @@ function tick(){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
 
   if(keyboard.hit("r")){
-    $("leaderboard").hide()
-    tresD.resetarCarro()
-    initGame()
+    tentarDenovo()
   }
 
   // game.road.draw(ctx, game.camera)
@@ -374,9 +377,10 @@ function tick(){
   const endpointProjetado = tresD.projetar(endPoint, camera.screenWidth, camera.screenHeight)
   ctx.save()
   ctx.translate(endpointProjetado[0],endpointProjetado[1])
-  ctx.scale(2,2)
+  ctx.scale(4,4)
   ctx.fillText( "⛽", 0, 0)
   ctx.restore()
+
   if(game.distToTarget > 20){
     let angulo =  vec2_angle( vec2_sub( endPoint, carro.position ) ) // Math.atan2( dY, dX )
     ui.indicadorPalhaco(ctx,
@@ -399,8 +403,8 @@ function tick(){
     ctx.save()
     ctx.textAlign="center"
     ctx.textBaseline="bottom"
-    ctx.translate(screenWidth*0.5,screenHeight*0.25)
-    const s = 2 + Math.abs(Math.cos(game.frames*0.2)*0.25)
+    ctx.translate(screenWidth*0.5,screenHeight*0.1)
+    const s = 3 + Math.abs(Math.cos(game.frames*0.2)*0.25)
     ctx.scale(s,s)
     ctx.fillText("DRIFTING!",0,0)
     ctx.fillText(game.driftLength.toFixed(2),0,20)
@@ -417,33 +421,25 @@ document.addEventListener("DOMContentLoaded", function (event) {
     game.canvas = $("myCanvas");
     /** @type {CanvasRenderingContext2D} */
     game.ctx = game.canvas.getContext("2d");
-    
-
     function fitCanvas(){
       // idealmente a gente tem que limpar camera...
       game.ctx.clearRect(0,0,game.canvas.width,game.canvas.height)
       const {height,width} = document.body.getBoundingClientRect()
       if(height > width){
-        console.log("retrato")
         game.camera.screenWidth = SCREEN_WIDTH
         game.camera.screenHeight = SCREEN_WIDTH * (height/width)
       }else{
-        console.log("paisagem")
         game.camera.screenHeight = SCREEN_HEIGHT
         game.camera.screenWidth = SCREEN_HEIGHT * (width/height)
       }
       game.canvas.width = game.camera.screenWidth
       game.canvas.height = game.camera.screenHeight
-
-      console.log("ficou assim: ", game.canvas.width, game.canvas.height)
     }
 
     window.addEventListener("resize", event =>{
       fitCanvas()
       tresD.handleResize(game.canvas)
     })
-
-
 
     initInput()
     // se a pessoa nunca jogou:
@@ -493,6 +489,22 @@ function initInput(){
   // TODO: fazer os controles de toque!
   document.onkeydown = ({key}) => keyboard[ key ] = true
   document.onkeyup = ({key}) => keyboard[ key ] = false
+
+  // controles de toque/botão
+  $("btn_tryAgain").onclick = function(){
+    $("touchControls").style.display="block"
+    tentarDenovo()
+  }
+
+  document.querySelectorAll("[data-kb]").forEach( (/** @type {HTMLElement} */elemento) =>{
+    const key = elemento.getAttribute("data-kb")
+    elemento.ontouchstart = function(){
+      keyboard[key]=true
+    }
+    elemento.ontouchend = function(){
+      keyboard[key]=false
+    }
+  })
 }
 
 export { Camera }

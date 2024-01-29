@@ -1,4 +1,4 @@
-const EDGE_LENGTH = 12
+const EDGE_LENGTH = 6
 const WAYPOINT_SPACING = 4
 
 
@@ -178,6 +178,10 @@ class RoadSegment{
       // calcula os pontos do aabb
       this.aabb = this.getAABB()
     }
+
+    /**
+     * @returns {[number,number]}
+     */
     get endPoint(){
       const [centerX, centerY] = this.center
       const endPointX = centerX + (this.radius) * Math.cos((this.from + this.to)*Math.PI)

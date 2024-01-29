@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- ad sense-->
     <meta name="google-adsense-account" content="ca-pub-9754268803581055">
     
@@ -33,22 +33,26 @@
             height:100%;
             margin-left: auto;
             margin-right:auto;
+            z-index:5;
+            pointer-events: none;
         }
         .porta-texto{
             position: fixed;
             padding: 6em;
         }
         #myCanvas{
-            max-width: 100%;
-            height: 100%;
-            background-color: none;            
+            width: 100%;
+            height: 100%;            
             image-rendering: pixelated;
+            object-fit: contain;
+            z-index:2
         }
         .tresDe{
             margin-left:auto;
             margin-right:auto;
             position: absolute;
             image-rendering: pixelated;
+            z-index:1;
         }
         .leaderboard{
             position:fixed;
@@ -62,10 +66,48 @@
             position: fixed;
             width:100svw;
             height: 100svh;
-            z-index: 3;
+            z-index: 5;
         }
         li{
             list-style:none;
+        }
+        #touchControls{
+            display:none;
+        }
+        @media (hover:none){
+            [data-kb=w]{ background-image: url(pedal_gas.png); }
+            [data-kb=s]{ background-image: url(pedal_brake.png); }
+            [data-kb=a]{ background-image: url(left.png); }
+            [data-kb=d]{ background-image: url(right.png); }
+            #touchControls{
+                display: block;
+                position:fixed;
+                left: 0px;
+                bottom: 0px;
+                margin-bottom:1em;
+                opacity: 0.6;
+            }
+            .touch-btn:active, .touch-btn-sm:active{
+                outline:3px solid rgba(255, 255, 255, 0.5);
+            }
+            .touch-btn{
+                background-size: 70%;
+                background-repeat: no-repeat;
+                background-position: 50% 50%;  
+                background-color: rgba(0,0,0,0.2);          
+                width:6em;
+                height:6em;
+                border-radius:3em;
+            }
+            .touch-btn-sm{
+                background-size: 70%;
+                background-repeat: no-repeat;
+                background-position: 50% 50%;  
+                background-color: rgba(0,0,0,0.2);                
+                width:4em;
+                height:4em;
+                border-radius:2em;
+            }
         }
     </style>
     <!-- Google tag (gtag.js) -->
@@ -74,14 +116,13 @@
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-
             gtag('config', 'G-QT4FGLR6K6');
         </script>
-  <script type="module" crossorigin src="/assets/index-p_zAcI9m.js"></script>
+  <script type="module" crossorigin src="/assets/index-ZbOsXApl.js"></script>
 </head>
     <body>    
         <div class="porta-canvas">
-            <canvas id="myCanvas" width="600" height="600" ></canvas>
+            <canvas id="myCanvas"></canvas>
         </div>        
         <div class="overlay">
             <div class="container py-5 hidden" id="manual">
@@ -113,14 +154,29 @@
             </div>
             <div class="container-sm py-5 hidden" id="leaderboard">
                 <div class="card shadow">
-                    <div class="card-body">
+                    <div class="card-body" style="overflow-y: scroll; max-height:50svh;">
                         <table class="table" id="tb_Leaderboard">
                             <tr><td>#</td><td></td><td></td></tr>
                             <tr><td>1 🥇</td><td>El Gato</td><td>6.0km</td></tr>
                             <tr><td>2 🥈</td><td>El Gato</td><td>6.0km</td></tr>
                             <tr><td>3 🥉</td><td>El Gato</td><td>6.0km</td></tr>
                             <tr><td>99</td><td>Você</td><td>0.0km</td></tr>
-                        </table>    
+                        </table>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn form-control" id="btn_tryAgain">tentar de novo?😞</button>        
+                    </div>
+                </div>
+            </div>
+            <div class="container-fluid" id="touchControls">
+                <div class="d-flex flex-row justify-content-between align-items-end">
+                    <div class="d-flex flex-column">
+                        <div class="btn touch-btn-sm mb-3" data-kb="s"></div>    
+                        <div class="btn touch-btn" data-kb="w"></div>
+                    </div>
+                    <div class="d-flex flex-row">
+                        <div class="btn touch-btn-sm mx-3" data-kb="a"></div>
+                        <div class="btn touch-btn-sm" data-kb="d"></div>    
                     </div>
                 </div>
             </div>

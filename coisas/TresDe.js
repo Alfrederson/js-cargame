@@ -24,7 +24,8 @@ import {
     FrontSide,
     TextureLoader,
     NearestFilter,
-    RepeatWrapping
+    RepeatWrapping,
+    PlaneGeometry
 } from 'three'
 import {
     GLTFLoader 
@@ -42,6 +43,7 @@ class Particula{
 }
 
 const bola = new BoxGeometry(1,1,1)
+const plano = new PlaneGeometry(1,1)
 
 class Explosao{
     /** @type {Object3D} */
@@ -58,18 +60,17 @@ class Explosao{
         })
         this.object = new Mesh(bola, material)
         this.object.position.set(x,y,z)
-        this.scale = 3
+        this.scale = 1
     }
     tick(){
         if(this.lifeTime < 15){
-            this.scale -= 0.1
+            this.scale *= 1.1
         }else{
-            this.object.material.opacity *= 0.9
+            this.scale += 0.2
+            this.object.material.opacity *= 0.5
         }
         this.object.scale.set(this.scale, this.scale, this.scale)
-        if(++this.lifeTime > 120){
-            this.finished = true
-        }
+        this.finished = (++this.lifeTime > 160)
     }
 }
 
@@ -81,17 +82,16 @@ class Fumaca{
     lifeTime = 0
     sY = 0
     constructor(x,y,z){
-        let material = new MeshStandardMaterial({
+        this.object = new Mesh(bola, new MeshStandardMaterial({
             color : 0x222222,
             transparent: true,
-        })
-        this.object = new Mesh(bola, material)  
+        }))  
         this.object.position.set(x,y,z)     
         this.sy = 0.02 + Math.random() * 0.05 
     }
     tick(){
-        if(this.lifeTime < 5){
-            this.scale += 0.1
+        if(this.lifeTime < 10){
+            this.scale *= 1.1
         }else{
             this.scale -= 0.01
             if(this.scale <= 0) this.scale = 0
@@ -102,18 +102,37 @@ class Fumaca{
         this.object.rotation.x += 0.05
         this.object.rotation.y += 0.05
         this.object.rotation.z += 0.05
-
-        if(++this.lifeTime > 120){
-            this.finished = true
-        }
+        this.finished = ++this.lifeTime > 120
     }    
 }
 
-let cena = {
+class SkidMark {
+    /** @type {Object3D} */
+    object = undefined
+    finished = false
+    lifeTime = 0
+    constructor(x,y,z, a, l){
+        this.object = new Mesh(plano, cena.mat.skid)  
+        this.object.position.set(x,y,z)
+        this.object.rotation.set(-Math.PI/2,0,a)
+        this.object.scale.set(1,l,1)
+    }
+    tick(){
+        this.finished = ++this.lifeTime > 120
+    }        
+}
 
-    matEstrada : new MeshBasicMaterial({
-        color:0xFFFFFF,
-    }),
+let cena = {
+    mat : {
+        skid : new MeshBasicMaterial({
+            color: 0xFFFFFF,
+            opacity: 0.5,
+            transparent: true,
+        }),
+        road : new MeshBasicMaterial({
+            color:0xFFFFFF
+        })
+    },
 
     /** @type {Mesh?} */
     carro : undefined, // isso é só o centro do carro.
@@ -136,6 +155,11 @@ let cena = {
     /** @type {Object3D[]} */
     road: [],
 
+
+    // coisas de estado que não deveriam estar aqui...
+    state : {
+        drifting: false
+    },
     /**
      * 
      * @param {Particula} p 
@@ -156,13 +180,11 @@ const loader = new GLTFLoader()
  * @param {HTMLCanvasElement} element 
  */
 export function handleResize(element){
-    console.log("redimensionar o tresde1 pra ficar biito")
     const {width,height} = element.getBoundingClientRect()
     cena.renderer.setSize(width,height)
     cena.renderer.setPixelRatio((element.height / height)*0.5)
     cena.camera.aspect = width/height
     cena.camera.updateProjectionMatrix()
-    console.log(cena.camera.aspect)
 }
 
 /**
@@ -187,10 +209,7 @@ export function init(element){
         new AmbientLight(0xFFFFFF,0.5)
     )
     const directionalLight = new DirectionalLight( 0xffffff, 1 );
-    
-    directionalLight.position.z = 3
-    directionalLight.position.x = 4
-    directionalLight.position.y = 10
+    directionalLight.position.set(3,4,10)
     directionalLight.lookAt(new Vector3(0,0,0))
 
     if(!/Android/i.test(navigator.userAgent)){
@@ -230,12 +249,18 @@ export function init(element){
     textura.wrapT = RepeatWrapping
     textura.magFilter = NearestFilter
     textura.minFilter = NearestFilter
-    cena.matEstrada.map = textura
+    cena.mat.road.map = textura
 
+    const texturaDerrapada = textureLoader.load("./skid.png")
+    texturaDerrapada.magFilter = NearestFilter
+    texturaDerrapada.minFilter = NearestFilter
+    cena.mat.skid.map = texturaDerrapada
     // textureLoader.load("./rua.png", textura =>{
 
         
     // })    
+
+
 
     cena.carro = new Object3D() // Mesh( geometry, material )
     cena.scene.add( cena.carro )
@@ -248,15 +273,40 @@ export function init(element){
 }
 
 // como o carro vai ser só um mesh "estático", isso é aceitável.
+let oldX = 0, oldY = 0, driftCounter=0
 export function posicionarCarro( x,y, angulo ){
     cena.carro.position.set(x,0,y)
     if(cena.carroBody){
         cena.carroBody.rotation.y = -angulo + Math.PI*0.5
         //cena.carro.rotation.y = -(((angulo*16)|0)/16) + Math.PI*0.5
     }
+    
+    if(cena.state.drifting){
+        if(++driftCounter==2){
+            let dX = x-oldX
+            let dY = y-oldY
+            let comprimento = Math.sqrt(
+                dX*dX + dY*dY
+            )
+            let anguloSkid = Math.atan2(-dY,dX)+Math.PI/2
+            cena.addParticula(
+                new SkidMark(
+                    (x+oldX)/2 - dX*2.2,
+                    0.05,
+                    (y+oldY)/2 - dY*2.2,
+                    anguloSkid,
+                    comprimento*2.2
+                )
+            )
+            driftCounter=0
+        }
+    }
+    oldX = x
+    oldY = y    
 }
 
 export function resetarCarro(){
+    cena.state.drifting = false
     // limpar as explosões...
     for(let p of cena.particulas){
         cena.scene.remove(p.object)
@@ -288,7 +338,18 @@ export function explodirCarro(){
     cena.carro.visible=false
 }
 
-export function renderizar3D(){
+export function startDrifting(){
+    cena.state.drifting=true
+}
+export function endDrifting(){
+    cena.state.drifting=false
+}
+
+/**
+ * 
+ * @param {GameState} gameState 
+ */
+export function renderizar3D(gameState){
     cena.renderer.clear()
     // atualizar as explosões...
     let particulas = []
@@ -318,18 +379,16 @@ export function setZoom(zoom){
  * @param {RoadSegment} segment 
  */
 export function addRoadSegment(segment){
-    const {vertices,indices,uvs} = segment.generateVertexBuffer()
-
-    const geometry = new BufferGeometry()
-    const verticesArray = new Float32Array(vertices)
-    console.log(uvs.length)
+    const {vertices,indices,uvs} = segment.generateVertexBuffer(),
+        geometry = new BufferGeometry(),
+        verticesArray = new Float32Array(vertices)
     geometry
         .setIndex( indices )
         .setAttribute('position', new BufferAttribute(verticesArray,3))
         .setAttribute('uv',new BufferAttribute(new Float32Array(uvs),2))
 
     // usa um material de rua...
-    const mesh = new Mesh(geometry, cena.matEstrada)
+    const mesh = new Mesh(geometry, cena.mat.road)
 
     const trecho = {
         object : mesh,
