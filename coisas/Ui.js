@@ -50,7 +50,6 @@ export function velocimetro(ctx, x,y, velocidade, velocidadeMax, velocidadeAlvo)
   ctx.fillStyle = "black"
   ctx.textBaseline = "top"
   ctx.textAlign = "center"
-
   // desenha o de 0 a (max)
   ctx.fillText(
     "0",
@@ -68,6 +67,8 @@ export function velocimetro(ctx, x,y, velocidade, velocidadeMax, velocidadeAlvo)
   ctx.strokeStyle="red"
   ctx.lineWidth=3
   ctx.lineTo(x+Math.cos(-angulo)*60,y-Math.sin(-angulo)*raio )
+  ctx.stroke()
+
   ctx.fillStyle="red"
   // botar uma coisinha na velocidade alvo
   ctx.fillRect(
@@ -75,7 +76,6 @@ export function velocimetro(ctx, x,y, velocidade, velocidadeMax, velocidadeAlvo)
     y + Math.sin(anguloAlvo)*raio-4,
     8,8
   )
-  ctx.stroke()
 }
 
 /**
@@ -85,13 +85,56 @@ export function velocimetro(ctx, x,y, velocidade, velocidadeMax, velocidadeAlvo)
  * @param {number} y 
  * @param {number} gasolina 
  */
-export function medidorDeGasolina(ctx, x,y, gasolina){
+export function medidorDeGasolina2(ctx, x,y, gasolina){
   const width = 20, height =64
   ctx.save()
   ctx.fillStyle = "#000000"
   ctx.fillRect(x-1,y-height,width+2,height+2)
   ctx.fillStyle = "#FF0000"
   ctx.fillRect(x,y-height+((1-gasolina/GAME_GASOLINA_INICIAL)*height),width,((gasolina/GAME_GASOLINA_INICIAL)*height)|0)
+  ctx.restore()
+}
+
+
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {number} x 
+ * @param {number} y 
+ * @param {number} gasolina 
+ */
+
+let gasolinaAtual = 0
+export function medidorDeGasolina(ctx, x,y, gasolina){
+  const raio=40
+
+  gasolinaAtual = gasolinaAtual + (gasolina-gasolinaAtual)*0.05
+
+
+  const porcentagem = (gasolinaAtual/GAME_GASOLINA_INICIAL)
+  const anguloCheio = (0.25) * Math.PI
+  const anguloVazio = (0.75) * Math.PI
+  // const anguloMeio = (anguloCheio+anguloVazio)/2
+
+  const angulo = anguloVazio +(anguloCheio-anguloVazio)*porcentagem
+
+  // o medidor de gasolinha é um ponteirinho.
+  ctx.save()
+
+  ctx.font = "600 16px monospace"
+  ctx.textBaseline = "bottom"
+  ctx.textAlign = "center"
+  ctx.fillStyle = "red"
+  ctx.fillText("E", x + Math.cos(anguloVazio)*raio, y + Math.sin(anguloVazio)*raio-20)
+
+  ctx.fillStyle = "black"
+  ctx.fillText("F", x + Math.cos(anguloCheio)*raio, y + Math.sin(anguloCheio)*raio-20)
+
+  ctx.strokeStyle = "3px red"
+  ctx.beginPath()
+  ctx.moveTo( x + Math.cos(angulo) * (raio-20), y - Math.sin(angulo) * (raio-20)+raio)
+  ctx.lineTo( x + Math.cos(angulo) * raio, y - Math.sin(angulo) * raio +raio)
+  ctx.stroke()
   ctx.restore()
 }
 

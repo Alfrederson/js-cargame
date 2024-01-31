@@ -46,14 +46,14 @@
             height: 100%;            
             image-rendering: pixelated;
             object-fit: contain;
-            z-index:2
+            z-index:1
         }
         .tresDe{
             margin-left:auto;
             margin-right:auto;
             position: absolute;
             image-rendering: pixelated;
-            z-index:1;
+            z-index:2;
         }
         .hidden{
             display: none;
@@ -62,15 +62,17 @@
             position: fixed;
             width:100svw;
             height: 100svh;
-            z-index: 4;
+            z-index: 5;
         }
         li{
             list-style:none;
         }
-        #touchControls{
-            display:none;
+        @media (hover:hover){
+            #touchControls{
+                display:none;
+            }
         }
-        @media (hover:none){
+        /* @media (hover:none){ */
             [data-kb=w]{ background-image: url(pedal_gas.png); }
             [data-kb=s]{ background-image: url(pedal_brake.png); }
             [data-kb=a]{ background-image: url(left.png); }
@@ -104,7 +106,7 @@
                 height:4em;
                 border-radius:2em;
             }
-        }
+        /* } */
     </style>
     <!-- Google tag (gtag.js) -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-QT4FGLR6K6"></script>
@@ -114,7 +116,7 @@
             gtag('js', new Date());
             gtag('config', 'G-QT4FGLR6K6');
         </script>
-  <script type="module" crossorigin src="/assets/index-NGMZiUKG.js"></script>
+  <script type="module" crossorigin src="/assets/index-lu4vB4lf.js"></script>
 </head>
     <body>    
         <div class="porta-canvas">
@@ -142,7 +144,7 @@
                         <h1 class="text-center" id="lb_finalScore">🤡 nome?</h1>
                         <form id="fm_playerName">
                             <label for="in_playerName"></label>
-                            <input type="text" minlength="3" maxlength="20" class="form-control mb-4" id="in_playerName" placeholder="nome/name?"/>
+                            <input type="text" minlength="3" maxlength="20" class="form-control mb-4" pattern="[A-Za-z0-9]+" id="in_playerName" placeholder="nome/name?"/>
                             <input type="submit" class="btn form-control" id="btn_hideManual"/>            
                         </form>
                     </div>    

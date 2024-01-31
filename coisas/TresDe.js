@@ -1,3 +1,4 @@
+//@ts-check
 /*
     Isso serve SÓ PARA BOTAR O CARRINHO NA TELA, e de um jeito errado
 */
@@ -10,29 +11,24 @@ import {
     Vector3,
     PerspectiveCamera,
     BoxGeometry,
-    IcosahedronGeometry,
     MeshStandardMaterial,
     Object3D,
-    InstancedMesh,
     AdditiveBlending,
-    MultiplyBlending,
     MeshBasicMaterial,
     BufferGeometry,
     BufferAttribute,
-    BackSide,
     DoubleSide,
-    FrontSide,
     TextureLoader,
     NearestFilter,
     RepeatWrapping,
     PlaneGeometry
 } from 'three'
+
 import {
     GLTFLoader 
+// @ts-ignore
 } from 'three/addons/loaders/GLTFLoader';
 
-import carro_mesh from './carro_mesh';
-import { PointLight } from 'three'
 import { RoadSegment } from './RoadSegment';
 
 /** @interface */
@@ -111,6 +107,13 @@ class SkidMark {
     object = undefined
     finished = false
     lifeTime = 0
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @param {number} a
+     * @param {number} l
+     */
     constructor(x,y,z, a, l){
         this.object = new Mesh(plano, cena.mat.skid)  
         this.object.position.set(x,y,z)
@@ -122,6 +125,7 @@ class SkidMark {
     }        
 }
 
+
 let cena = {
     mat : {
         skid : new MeshBasicMaterial({
@@ -129,13 +133,18 @@ let cena = {
             opacity: 0.5,
             transparent: true,
         }),
-        road : new MeshBasicMaterial({
-            color:0xFFFFFF
-        })
+        road : new MeshBasicMaterial({wireframe: true, color: 0x00FF00}),
+        arco : new MeshBasicMaterial({transparent: true, side: DoubleSide}),
+        fimDaLinha : new MeshBasicMaterial({transparent: true, side: DoubleSide})
     },
 
     /** @type {Mesh?} */
-    carro : undefined, // isso é só o centro do carro.
+    fimDaLinha : undefined, // plaquinha pra não deixar a pessoa sair da estrada
+    /** @type {Mesh?} */
+    arco : undefined,
+
+    carro : new Object3D(), // isso é só o centro do carro.
+
 
     /** @type {Mesh?} */
     carroBody : undefined, // isso é o modelo.
@@ -152,7 +161,7 @@ let cena = {
     /** @type {Particula[]} */
     particulas : [],
 
-    /** @type {Object3D[]} */
+    /** @type {{mesh: Object3D, geometry: BufferGeometry}[]} */
     road: [],
 
 
@@ -185,6 +194,16 @@ export function handleResize(element){
     cena.renderer.setPixelRatio((element.height / height)*0.5)
     cena.camera.aspect = width/height
     cena.camera.updateProjectionMatrix()
+}
+
+const pixelate = textura =>{
+    textura.magFilter = NearestFilter
+    textura.minFilter = NearestFilter
+}
+
+const paint = (mat,textura) =>{
+    mat.map = textura
+    mat.needsUpdate = true
 }
 
 /**
@@ -223,50 +242,50 @@ export function init(element){
         1000
     )
 
-    // const geometry = new BoxGeometry( 1, 0.4, 0.4)
-    // const material = new MeshStandardMaterial({ color : 0x00FF00 })
-
-    // loader.parse(carro_mesh,"", function({/** @type {Object3D} */ scene,scenes,cameras,animations,asset}){
-    //     // scene.scale.set(0.5,0.5,0.5)
-    //     scene.position.y = 0.2
-    //     cena.carroBody = scene
-    //     cena.carro.add(scene)
-    // })
-
     // não estou usando isso aqui ainda por causa do base do vite.
     loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
         scene.rotation.y = Math.PI*0.5
-        // scene.scale.set(0.5,0.5,0.5)
         scene.scale.set(1.2,1.2,1.2)
-        console.log("done!")
         let mat = scene.children[0].material
-        mat.map.minFilter = NearestFilter
-        mat.map.magFilter = NearestFilter
-        console.log(mat)
+        pixelate(mat.map)
         cena.carroBody = scene
         cena.carro.add(scene)
     })
 
-    // carrega a textura da rua e põe lá na rua.
-    
+    // texturas e etc.
     const textureLoader = new TextureLoader()
+
+
 
     textureLoader.load("./rua.png", textura =>{
         textura.wrapS = RepeatWrapping
         textura.wrapT = RepeatWrapping
-        textura.magFilter = NearestFilter
-        textura.minFilter = NearestFilter
-        cena.mat.road.map = textura
-        cena.mat.road.needsUpdate = true
+        cena.mat.road.wireframe=false
+        cena.mat.road.color.set(0xFFFFFF)
+        pixelate(textura)
+        paint(cena.mat.road, textura )
     })
     textureLoader.load("./skid.png", textura =>{
-        textura.magFilter = NearestFilter
-        textura.minFilter = NearestFilter
-        cena.mat.skid.map = textura
-        cena.mat.skid.needsUpdate = true
+        pixelate(textura)
+        paint(cena.mat.skid, textura )
     })
 
-    cena.carro = new Object3D() // Mesh( geometry, material )
+    cena.fimDaLinha = new Mesh( plano, cena.mat.fimDaLinha )
+    cena.fimDaLinha.scale.set(4,2,2)
+    cena.scene.add( cena.fimDaLinha )
+    textureLoader.load('./road_end.png', textura =>{
+        pixelate(textura)
+        paint(cena.mat.fimDaLinha, textura)
+    })
+
+    cena.arco = new Mesh( plano, cena.mat.arco )
+    cena.arco.scale.set(6,6,6)
+    cena.scene.add( cena.arco )
+    textureLoader.load('./arco.png', textura =>{
+        pixelate(textura)
+        paint(cena.mat.arco,textura)
+    })    
+
     cena.scene.add( cena.carro )
     cena.carro.add( cena.camera )
 
@@ -277,11 +296,16 @@ export function init(element){
 
 // como o carro vai ser só um mesh "estático", isso é aceitável.
 let oldX = 0, oldY = 0, driftCounter=0
+/**
+ * @param {number} x
+ * @param {number} y
+ * @param {number} angulo
+ */
 export function posicionarCarro( x,y, angulo ){
+    
     cena.carro.position.set(x,0,y)
     if(cena.carroBody){
         cena.carroBody.rotation.y = -angulo + Math.PI*0.5
-        //cena.carro.rotation.y = -(((angulo*16)|0)/16) + Math.PI*0.5
     }
     
     if(cena.state.drifting){
@@ -295,7 +319,7 @@ export function posicionarCarro( x,y, angulo ){
             cena.addParticula(
                 new SkidMark(
                     (x+oldX)/2 - dX*2.2,
-                    0.05,
+                    0.1,
                     (y+oldY)/2 - dY*2.2,
                     anguloSkid,
                     comprimento*2.2
@@ -348,11 +372,7 @@ export function endDrifting(){
     cena.state.drifting=false
 }
 
-/**
- * 
- * @param {GameState} gameState 
- */
-export function renderizar3D(gameState){
+export function render(){
     cena.renderer.clear()
     // atualizar as explosões...
     let particulas = []
@@ -371,11 +391,7 @@ export function renderizar3D(gameState){
 export function setZoom(zoom){
     cena.camera.position.z = 5 + (1- zoom/12)*11
     cena.camera.position.y = 5 + (1- zoom/12)*11
-    //cena.camera.lookAt(new Vector3(0,0,0))
 }
-
-
-
 
 /**
  * Adiciona um segmento de rua no 3D...
@@ -392,29 +408,34 @@ export function addRoadSegment(segment){
 
     // usa um material de rua...
     const mesh = new Mesh(geometry, cena.mat.road)
+    cena.scene.add( mesh )
+    cena.road.push({mesh,geometry})
+}
 
-    const trecho = {
-        object : mesh,
-        geometry : geometry
-    }
+export function posicionarFimDaLinha(x,y,a){
+    cena.fimDaLinha.position.set(x,1,y)
+    cena.fimDaLinha.rotation.set(0,-a,0)
+}
 
-    cena.scene.add( trecho.object )
-    cena.road.push( trecho )
+export function posicionarArco(x,y,a){
+    cena.arco.position.set(x,3,y)    
+    cena.arco.rotation.set(0,-a,0)
 }
 
 // não consegui pensar em um jeito melhor de fazer isso.
 export function removeRoadStart(){
     let trecho = cena.road.shift()
     if(trecho){
-        cena.scene.remove(trecho.object)
+        cena.scene.remove(trecho.mesh)
         trecho.geometry.dispose()
     }
 }
 
 export function clearRoad(){
-    for(let segment of cena.road){
-        cena.scene.remove( segment.object )
-    }
+    cena.road.forEach( x => {
+        cena.scene.remove(x.mesh)
+        x.geometry.dispose()
+    })
 }
 
 // faz exatamente o que parece.

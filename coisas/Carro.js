@@ -1,3 +1,4 @@
+import { GAME_GASOLINA_INICIAL } from "../config"
 import { Camera } from "./Camera"
 
 import { clamp, vec2_len } from "./util"
@@ -80,6 +81,8 @@ function CarroConfig(options){
 }
 
 class Carro {
+    rpm = 0
+
     heading = 0
     position = [0,0];
     velocity = [0,0];
@@ -104,7 +107,11 @@ class Carro {
     /** @type {CarroConfigOptions} */
     config = {}
 
+    gasolina = GAME_GASOLINA_INICIAL
+
     reset(){
+        this.gasolina = GAME_GASOLINA_INICIAL
+        this.rpm = 0
         this.heading = 0
         this.position = [0,0]
         this.velocity = [0,0]
@@ -161,12 +168,33 @@ class Carro {
     }
 
 
+    refuel(amount){
+        this.gasolina += amount
+        if(this.gasolina>= GAME_GASOLINA_INICIAL){
+            this.gasolina = GAME_GASOLINA_INICIAL
+        }
+    }
 
     /**
-     * 
      * @param {number} dt - delta tempo em segundos.
      */
     update(dt){
+        if(this.gasolina <= 0){
+            this.gasolina = 0
+            this.input.throttle = 0
+        }
+
+        if (this.input.throttle) {
+            this.rpm += (17 - this.rpm) * 0.005
+            if (this.rpm > 15) this.rpm = 12
+
+            this.gasolina -= this.rpm * 0.008
+        } else {
+            this.rpm -= 0.2
+            if (this.rpm < 4)
+                this.rpm = 4
+        }
+
         this.doSteering()
         const cfg = this.config
         const sin = Math.sin( this.heading )

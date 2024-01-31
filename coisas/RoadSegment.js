@@ -1,7 +1,5 @@
 const EDGE_LENGTH = 6
 const WAYPOINT_SPACING = 4
-
-
 class RoadSegment{
     center
     radius
@@ -23,11 +21,8 @@ class RoadSegment{
   
     clockwise = true
 
-    /** gera uma lista de quadrados....? */
+    /** gera uma lista de triangulos.... */
     generateVertexBuffer(){
-      const faces = []
-
-
       const vertices = []
       const indices = []
       const uvs = []
@@ -51,12 +46,7 @@ class RoadSegment{
           a resolução é um leetcode nível fácil.
       */
       // vai fazendo o lado esquerdo
-
-
-
-
       const [x,y] = this.center
-      let v=0
       for(let i = 0; i <= vertexCount; i++){
         uvs.push(0,i*1)
         vertices.push(x + Math.cos( (this.from + angleIncrement * i) * Math.PI) * (this.radius - this.width/2))
@@ -91,8 +81,6 @@ class RoadSegment{
           indices.push(vertexCount*2-i+1)
           indices.push(i+1)
           indices.push(vertexCount*2-i)      
-          
-             
         }else{
           // triangulo da direita
           indices.push(i+1)
@@ -190,6 +178,13 @@ class RoadSegment{
         endPointX,
         endPointY
       ]
+    }
+
+    get startOrientation(){
+      return (this.from+(this.clockwise?1:-1))*Math.PI      
+    }
+    get endOrientation(){
+      return (this.from+this.to+(this.clockwise?1:-1))*Math.PI      
     }
   
     get endPointLeft(){
@@ -329,28 +324,23 @@ class RoadSegment{
     drawAsphalt(ctx,camera){
       ctx.save()
       ctx.beginPath()
-
       if(this.clockwise){
         ctx.fillStyle = "#555555"
       }else{
         ctx.fillStyle = "#646464"
       }
-      
       ctx.moveTo(...camera.translate(this.vertices[0]))
       const vertexCount = this.vertices.length
       for(let i = 1; i < vertexCount; i++){
          ctx.lineTo( ...camera.translate( this.vertices[i] ))
       }
-
       ctx.closePath()
       ctx.fill()
       ctx.restore()
     }
 
     draw(ctx, camera){
-
       this.drawAsphalt(ctx, camera)
-
       // tracejado
       ctx.strokeStyle="#F0CD0E"
       ctx.lineWidth = 3
@@ -363,50 +353,9 @@ class RoadSegment{
           ctx.stroke()
         }
       }
-
       if(this.next){
         this.next.draw(ctx, camera)
       }
-
-      return
-      const [centerX, centerY] = this.center
-      const angleIncrement = (this.to*Math.PI)/this.segments;
-      const fromAngle = this.from*Math.PI;
-  
-      let paths = [
-        [-this.width/2, "red"], // esquerda
-        [this.width/2, "green"] // direita
-      ]
-      
-      if(!this.clockwise){
-        paths = [
-          [-this.width/2, "green"], // esquerda
-          [this.width/2, "red"] // direita
-        ]
-      }
-  
-      ;paths.forEach( ([offset,color]) =>{
-        ctx.strokeStyle = color
-        ctx.beginPath();
-               
-        let angle = fromAngle;
-        for(let i = 0; i <= this.segments; i++){
-          const x = centerX + (this.radius+offset) * Math.cos(angle)
-          const y = centerY + (this.radius+offset) * Math.sin(angle)  
-          angle += angleIncrement
-          ctx.lineTo( ...camera.translate([x,y]) )
-        }
-        ctx.stroke()  
-      });
-      
-      // ctx.beginPath();
-      // ctx.moveTo(...camera.translate(this.waypoints[0]))
-      // for(let i = 1; i < this.waypoints.length; i++){
-      //   ctx.fillText( i, ...camera.translate( this.waypoints[i] ))
-      //   ctx.lineTo( ...camera.translate( this.waypoints[i] ))
-      // }
-      // ctx.stroke()
-    
     }
   }
 

@@ -81,25 +81,30 @@ export function vec2_dp(v1,v2){
     return v1[0]*v2[0] + v1[1]*v2[1]
 }
 
-export function sequencia( ...passos ){
-    let promise
-    for(let i = 0; i < passos.length; i++){
-        if(i==0){
-            promise = new Promise( (resolve,reject) =>{
-                passos[i]( resolve )
-            })
-        }else{
-            promise = promise.then(
-                ()=>{
-                    return new Promise( (resolve,reject)=>{
-                        passos[i]( resolve )
-                    })
-                }
-            )
+export function sequencia(chave){
+    return function(...passos){
+        let promise
+        for(let i = 0; i < passos.length; i++){
+            if(i==0){
+                promise = new Promise((resolve,_) => passos[i]( resolve ))
+            }else{
+                promise = promise.then(
+                    ()=> new Promise( (resolve,_)=>{
+                            if(i==passos.length-1){
+                                passos[i]( ()=>{
+                                    resolve()
+                                    localStorage.setItem(chave,"ja")
+                                })
+                                return
+                            }
+                            passos[i]( resolve )
+                        })
+                )
+            }
         }
+        promise.senao = ()=>{}
+        return promise
     }
-    promise.senao = ()=>{}
-    return promise
 }
 
 /**
@@ -110,10 +115,7 @@ export function sequencia( ...passos ){
 export function fazer( chave ){
     let ja_fez = localStorage.getItem(chave)
     if(ja_fez == null){
-        localStorage.setItem(chave,"ja")
-        return {
-            uma_so_vez : sequencia
-        }
+        return { uma_so_vez : sequencia(chave) }
     }
     // retorna uma coisa que faz um "senão."
     return {
@@ -125,4 +127,26 @@ export function fazer( chave ){
 
 export function passo( callback ){
     return new Promise( callback )
+}
+
+
+export function gerarTrecho(){
+    const comprimento = 40*Math.round( (1+Math.random()*9) )/10
+    const angulo = 0.4*Math.round( 1+Math.random()*9 )/10
+    const radius = comprimento/angulo
+    return {
+        radius,
+        to : Math.random() > 0.5 ? angulo : -angulo
+    }
+}
+
+export function $(id){
+    return document.getElementById(id)
+}
+
+export function show(e){
+    e.classList.remove("hidden")
+}
+export function hide(e){
+    e.classList.add("hidden")
 }
