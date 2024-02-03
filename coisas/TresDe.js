@@ -42,7 +42,7 @@ const bola = new BoxGeometry(1,1,1)
 const plano = new PlaneGeometry(1,1)
 
 class Explosao{
-    /** @type {Object3D} */
+    /** @type {Mesh} */
     object = undefined
     finished = false
     scale = 0
@@ -63,6 +63,7 @@ class Explosao{
             this.scale *= 1.1
         }else{
             this.scale += 0.2
+            // @ts-ignore
             this.object.material.opacity *= 0.5
         }
         this.object.scale.set(this.scale, this.scale, this.scale)
@@ -70,8 +71,9 @@ class Explosao{
     }
 }
 
+
 class Fumaca{
-    /** @type {Object3D} */
+    /** @type {Mesh} */
     object = undefined
     finished = false
     scale = 0.4
@@ -92,6 +94,7 @@ class Fumaca{
             this.scale -= 0.01
             if(this.scale <= 0) this.scale = 0
         }
+        // @ts-ignore
         this.object.material.opacity *= 0.99
         this.object.scale.set(this.scale, this.scale, this.scale)
         this.object.position.y += this.sy

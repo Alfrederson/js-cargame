@@ -29,6 +29,10 @@ import { fazer, vec2_angle, vec2_add, vec2_mul, vec2_sub, $, show,hide, gerarTre
 
 import { game_step } from "./game_step.js"
 
+import { host } from "./coisas/AndroidHost.js"
+
+const android = host()
+
 const game = {
   /** @type { Camera } */
   camera : new Camera(SCREEN_WIDTH,SCREEN_HEIGHT),
@@ -83,10 +87,12 @@ const game = {
   }
 }
 
+audio.init()
 const sfx = {
-  engine : new audio.Engine(),
-  bomb : new audio.Bomb(),
-  skid : new audio.Skid()
+  engine : new audio.Engine(audio.context),
+  bomb : new audio.Clip(audio.context,"./sfx/honk.m4a"),
+  check : new audio.Clip(audio.context,"./sfx/checkpoint.ogg",0.06),
+  skid : new audio.Skid(audio.context)
 }
 
 
@@ -154,6 +160,8 @@ const keyboard = {
 
 
 async function mandarHighScore(){
+  android.showAd()
+
   // primeiro a gente salva só localmente
   let vouMandar=false
   if(game.distancia > game.maiorDistancia){
@@ -194,6 +202,7 @@ async function mandarHighScore(){
 }
 
 function tentarDenovo(){
+  android.hideAd()
   $("touchControls").style.display="block"
   hide($("leaderboard"))
   tresD.resetarCarro()
@@ -341,11 +350,11 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
 function initInput(){
   document.onclick = function(){
-    audio.init()
+    audio.resume()
     document.onclick = undefined
   }
   document.ontouchstart = function(){
-    audio.init()
+    audio.resume()
     document.ontouchstart=undefined
   }
   // TODO: fazer os controles de toque!

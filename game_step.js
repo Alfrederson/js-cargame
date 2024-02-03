@@ -52,6 +52,8 @@ export function game_step(game,keyboard,sfx,mandarHighScore){
       )    
       // aumenta a gasolina
       game.carro.refuel(30)
+      // faz um sonzinho
+      sfx.check.play()
     }
         // tempo que a pessoa pode ficar parada.
     if(!game.valendo && --game.framesAteValer == 0 && !game.tutorial)
@@ -70,7 +72,7 @@ export function game_step(game,keyboard,sfx,mandarHighScore){
         }
         // 2 segundos e BUM
         if(game.framesParado > 60*GAME_TEMPO_MAXIMO_PARADO){
-          sfx.bomb.explode()
+          sfx.bomb.play()
           tresD.explodirCarro()
           game.carroExplodiu=true
           $("touchControls").style.display="none"
