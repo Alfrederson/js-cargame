@@ -21,7 +21,8 @@ import {
     TextureLoader,
     NearestFilter,
     RepeatWrapping,
-    PlaneGeometry
+    PlaneGeometry,
+    InstancedMesh
 } from 'three'
 
 import {
@@ -30,6 +31,7 @@ import {
 } from 'three/addons/loaders/GLTFLoader';
 
 import { RoadSegment } from './RoadSegment';
+import { Carro } from './Carro';
 
 /** @interface */
 class Particula{
@@ -104,6 +106,8 @@ class Fumaca{
         this.finished = ++this.lifeTime > 120
     }    
 }
+
+
 
 class SkidMark {
     /** @type {Object3D} */
@@ -300,17 +304,14 @@ export function init(element){
 // como o carro vai ser só um mesh "estático", isso é aceitável.
 let oldX = 0, oldY = 0, driftCounter=0
 /**
- * @param {number} x
- * @param {number} y
- * @param {number} angulo
+ * @param {Carro} carro
  */
-export function posicionarCarro( x,y, angulo ){
-    
+export function posicionarCarro( carro ){
+    const [x,y] = carro.position
+    const angulo = carro.heading
     cena.carro.position.set(x,0,y)
-    if(cena.carroBody){
+    if(cena.carroBody)
         cena.carroBody.rotation.y = -angulo + Math.PI*0.5
-    }
-    
     if(cena.state.drifting){
         if(++driftCounter==2){
             let dX = x-oldX
@@ -333,6 +334,7 @@ export function posicionarCarro( x,y, angulo ){
     }
     oldX = x
     oldY = y    
+    return this
 }
 
 export function resetarCarro(){
@@ -344,6 +346,7 @@ export function resetarCarro(){
     cena.particulas = []
     // resetar o carro...
     cena.carro.visible=true
+    return this
 }
 
 export function explodirCarro(){
@@ -366,13 +369,16 @@ export function explodirCarro(){
         cena.addParticula( particula )
     }
     cena.carro.visible=false
+    return this
 }
 
 export function startDrifting(){
     cena.state.drifting=true
+    return this
 }
 export function endDrifting(){
     cena.state.drifting=false
+    return this
 }
 
 export function render(){
@@ -389,11 +395,13 @@ export function render(){
     }
     cena.particulas = particulas
     cena.renderer.render( cena.scene, cena.camera )
+    return this
 }
 
 export function setZoom(zoom){
     cena.camera.position.z = 5 + (1- zoom/12)*11
     cena.camera.position.y = 5 + (1- zoom/12)*11
+    return this
 }
 
 /**
@@ -413,16 +421,19 @@ export function addRoadSegment(segment){
     const mesh = new Mesh(geometry, cena.mat.road)
     cena.scene.add( mesh )
     cena.road.push({mesh,geometry})
+    return this
 }
 
 export function posicionarFimDaLinha(x,y,a){
     cena.fimDaLinha.position.set(x,1,y)
     cena.fimDaLinha.rotation.set(0,-a,0)
+    return this
 }
 
 export function posicionarArco(x,y,a){
     cena.arco.position.set(x,3,y)    
     cena.arco.rotation.set(0,-a,0)
+    return this
 }
 
 // não consegui pensar em um jeito melhor de fazer isso.
@@ -432,6 +443,7 @@ export function removeRoadStart(){
         cena.scene.remove(trecho.mesh)
         trecho.geometry.dispose()
     }
+    return this
 }
 
 export function clearRoad(){
@@ -439,6 +451,7 @@ export function clearRoad(){
         cena.scene.remove(x.mesh)
         x.geometry.dispose()
     })
+    return this
 }
 
 // faz exatamente o que parece.

@@ -1,24 +1,14 @@
 export let context=new (window.AudioContext || window.webkitAudioContext)
-let failed=false
-
-const init_funcs = []
-export function init(){
-    for(let l of init_funcs){
-        l()
-    }    
-}
 
 export function resume(){
     context.resume()
 }
 
 class SFX {
+    /** @type {AudioContext?} */
     audiocontext = undefined
-    ready =false
     constructor(ctx){
         this.audiocontext = ctx
-    }
-    init(){
     }
 }
 
@@ -40,11 +30,7 @@ function loadClip( ctx, filePath, callback ){
     const request = new XMLHttpRequest()
     request.open('GET',filePath,true)
     request.responseType = 'arraybuffer'
-    request.onload = function(){
-        ctx.decodeAudioData(request.response, function (buffer){
-            callback(buffer)
-        })
-    }
+    request.onload = () => ctx.decodeAudioData(request.response, callback )
     request.send()
 }
 
@@ -72,9 +58,8 @@ export class Engine extends SFX {
             bufferSource.loop=true
             bufferSource.connect( this.lowPass )
             bufferSource.start()
-            this.ready = true
             if(this.isOn){
-                this.gainNode.gain.value = 1.5
+                this.gainNode.gain.value = 1.8
                 this.setFrequency(this.freq)
             }
         })
@@ -82,7 +67,7 @@ export class Engine extends SFX {
     }
     on(){
         this.isOn = true
-        this.gainNode.gain.value = 1.5
+        this.gainNode.gain.value = 1.8
     }
     off(){
         this.isOn = false
@@ -157,7 +142,6 @@ export class Skid extends SFX {
         this.oscFM.start()
         this.oscBase.start();
         this.oscIntensidade.start()
-        this.ready=true
     }
     start(){
         this.globalVolume.gain.value=0.1

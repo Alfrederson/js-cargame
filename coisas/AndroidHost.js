@@ -2,8 +2,12 @@
 
 /** @interface */
 class FakeHost{
-    showAd(){}
-    hideAd(){}
+    showAd(){
+        // console.log("mostrar ad")
+    }
+    hideAd(){
+        // console.log("ocultar ad")
+    }
 }
 
 /**

@@ -1,3 +1,5 @@
+import { ARC } from "./Collision"
+import { dist2d, vec2_sub } from "./util"
 const EDGE_LENGTH = 6
 const WAYPOINT_SPACING = 4
 class RoadSegment{
@@ -20,6 +22,76 @@ class RoadSegment{
     waypoints = []
   
     clockwise = true
+
+    get shapes(){
+      return [
+        { type : ARC, position : this.center, from : this.from, to : this.to, radius : this.radius + this.width/2 },
+        { type : ARC, position : this.center, from : this.from, to : this.to, radius : this.radius - this.width/2 },
+      ]
+    }
+
+    _pointWithinRadius(x,y){
+      const [cx,cy] = this.center
+      return Math.abs(dist2d([x,y],[cx,cy]) - this.radius) < this.width/2
+    }
+
+    _pointWithinAngles(x,y){
+      // vê se tá dentro do angulo...
+      const [cx,cy] = this.center
+      let angulo = Math.atan2(y-cy,x-cx) / (Math.PI)
+      if(angulo < 0)
+        angulo += 2
+      // ctx.fillText(this.from.toFixed(3)+" _ "+angulo.toFixed(3)+" _ "+(this.from+this.to).toFixed(3) + " _ "+this.clockwise,20,20)
+      // isso ficou desse jeito por causa daquele negócio de quando o circulo vai de 0.2 pra 1.8 no sentido anti-horário, por
+      // exemplo (0.4 voltas pra esquerda)
+      // vai ficar assim pra sempre
+      if(this.clockwise){
+        if(this.from+this.to > 2){
+          return (angulo > this.from && angulo < 2) || (angulo+2 < this.from+this.to)
+        }else{
+          return (angulo > this.from) && (angulo < this.from+this.to)
+        }
+      }else{
+        if(this.from+this.to < 0){
+          return (angulo < this.from && angulo > 0) || (angulo-2 > this.from+this.to)
+        }else{
+          return (angulo > this.from+this.to) && (angulo < this.from)
+        }
+      }
+    }
+
+    /**
+     * vê se uma lista de pontos está contida dentro desse segmento.
+     * @param {number[]} arg0 
+     * @returns {boolean}
+     */
+    containsPoint(ponto) {
+      const [x,y] = ponto
+      return this._pointWithinRadius(x,y) && this._pointWithinAngles(x,y)
+    }
+    /**
+     * 
+     * @param {number[][]} pontos 
+     * @returns {boolean}
+     */
+    containsPoints(pontos){
+      for(let ponto of pontos){
+        const [x,y] = ponto
+        if(!this._pointWithinRadius(x,y))
+          return false
+        if(!this._pointWithinAngles(x,y))
+          return false
+      }
+      return true
+    }
+    containsAnyPoint(pontos) {
+      for(let ponto of pontos){
+        const [x,y] = ponto
+        if(this._pointWithinRadius(x,y) && this._pointWithinAngles(x,y))
+          return true
+      }
+    }
+
 
     /** gera uma lista de triangulos.... */
     generateVertexBuffer(){
@@ -357,6 +429,21 @@ class RoadSegment{
         this.next.draw(ctx, camera)
       }
     }
+
+   [Symbol.iterator]() {
+    let current = this
+    return {
+      next() {
+        if (current) {
+          let value = current
+          current = current.next
+          return { value, done: false }
+        } else {
+          return { done: true }
+        }
+      }
+    }
+  }
   }
 
   export { RoadSegment }

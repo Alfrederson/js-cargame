@@ -1,26 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- ad sense-->
-    <meta name="google-adsense-account" content="ca-pub-9754268803581055">
-    
-    <!-- meta tag-->
-    <meta property="og:title" content="Burnout Turbo 64">
-    <meta property="og:description" content="Até que ponto você vai?">
-    <meta property="og:image" content="https://burnout-64.web.app/miniature.jpg">
-    <meta property="og:image:width" content="1024">
-    <meta property="og:image:height" content="1024">
-    <meta property="og:type" content="website">
 
     <title>Burnout Turbo 64</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link href="bootstrap.min.css" rel="stylesheet">
     <style>
-        body{
+        body {
             width: 100svw;
             height: 100svh;
-            overflow:hidden;
+            overflow: hidden;
             display: flex;
             padding: 0;
             margin: 0;
@@ -30,154 +21,218 @@
             user-select: none;
             background-color: lightslategray;
         }
-        .porta-canvas{
-            height:100%;
-            margin-left: auto;
-            margin-right:auto;
-            z-index:5;
+
+        .porta-canvas {
+            height: 100%;
+            z-index: 5;
             pointer-events: none;
         }
-        .porta-texto{
+
+        .porta-texto {
             position: fixed;
             padding: 6em;
         }
-        #myCanvas{
+
+        .game-canvas {
             width: 100%;
-            height: 100%;            
+            height: 100%;
             image-rendering: pixelated;
             object-fit: contain;
-            z-index:1
+            z-index: 1
         }
-        .tresDe{
-            margin-left:auto;
-            margin-right:auto;
+
+        .tresDe {
+            margin-left: auto;
+            margin-right: auto;
             position: absolute;
             image-rendering: pixelated;
-            z-index:2;
+            z-index: 2;
         }
-        .hidden{
+
+        .hidden {
             display: none;
         }
-        .overlay{
+
+        .overlay {
             position: fixed;
-            width:100svw;
+            width: 100svw;
             height: 100svh;
             z-index: 5;
+            align-content: center;
+            align-items: center;
+            display: flex;
         }
-        li{
-            list-style:none;
+
+        div[data-tutorial-visible]::after {
+            content: attr(data-tutorial-visible);
+            background-color: black;
+            color:white;
+            width:fit-content;
+            white-space: nowrap;
+            padding:0.25em;
+            border-radius: 0.5em;
         }
-        @media (hover:hover){
-            #touchControls{
-                display:none;
+
+        li {
+            list-style: none;
+        }
+
+        @media(orientation: landscape){
+            #touch_controls{
+                margin-bottom: 20em;
             }
         }
+
+
         /* @media (hover:none){ */
-            [data-kb=w]{ background-image: url(pedal_gas.png); }
-            [data-kb=s]{ background-image: url(pedal_brake.png); }
-            [data-kb=a]{ background-image: url(left.png); }
-            [data-kb=d]{ background-image: url(right.png); }
-            #touchControls{
-                display: block;
-                position:fixed;
-                left: 0px;
-                bottom: 0px;
-                margin-bottom:1em;
-                opacity: 0.6;
-            }
-            .touch-btn:active, .touch-btn-sm:active{
-                outline:3px solid rgba(255, 255, 255, 0.5);
-            }
-            .touch-btn{
-                background-size: 70%;
-                background-repeat: no-repeat;
-                background-position: 50% 50%;  
-                background-color: rgba(0,0,0,0.2);          
-                width:6em;
-                height:6em;
-                border-radius:3em;
-            }
-            .touch-btn-sm{
-                background-size: 70%;
-                background-repeat: no-repeat;
-                background-position: 50% 50%;  
-                background-color: rgba(0,0,0,0.2);                
-                width:4em;
-                height:4em;
-                border-radius:2em;
-            }
+        [data-kb=w] {
+            background-image: url(pedal_gas.png);
+        }
+
+        [data-kb=s] {
+            background-image: url(pedal_brake.png);
+        }
+
+        [data-kb=a] {
+            background-image: url(left.png);
+        }
+
+        [data-kb=d] {
+            background-image: url(right.png);
+        }
+
+        [data-kb=m] {
+            background-image: url(hand_brake.png);
+        }
+
+
+        #touch_controls {
+            display: block;
+            position: fixed;
+            left: 0px;
+            bottom: 0px;
+            margin-bottom: 1em;
+            opacity: 0.6;
+        }
+
+        .touch-down {
+            outline: 0.5em solid rgba(50, 255, 50, 1);
+        }
+
+        .touch-btn {
+            background-size: 70%;
+            background-repeat: no-repeat;
+            background-position: 50% 50%;
+            background-color: rgba(0, 0, 0, 0.2);
+            width: 6em;
+            height: 6em;
+            border-radius: 3em;
+        }
+
+        .touch-btn-sm {
+            background-size: 70%;
+            background-repeat: no-repeat;
+            background-position: 50% 50%;
+            background-color: rgba(0, 0, 0, 0.2);
+            width: 4em;
+            height: 4em;
+            border-radius: 2em;
+        }
+
         /* } */
-    </style>
+    </style>
+
     <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-QT4FGLR6K6"></script>
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-QT4FGLR6K6');
-        </script>
-  <script type="module" crossorigin src="/assets/index-g0ZXfaEq.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QT4FGLR6K6"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-QT4FGLR6K6');
+    </script>
+  <script type="module" crossorigin src="assets/index-kpEGlvIb.js"></script>
 </head>
-    <body>    
-        <div class="porta-canvas">
-            <canvas id="myCanvas"></canvas>
-        </div>        
-        <div class="overlay">
-            <div class="container py-5 hidden" id="manual">
-                <div class="card shadow mx-auto" style="width: fit-content;">
-                    <div class="card-body">
-                        <ul>
-                            <li><kbd>w</kbd> acelerar/gas</li>
-                            <li><kbd>s</kbd> freiar/brake</li>
-                            <li><kbd>a</kbd> esquerda/left</li>
-                            <li><kbd>d</kbd> direita/right</li>
-                            <li><kbd>m</kbd> freio de mão/emergency brake</li>
-                            <li><kbd>r</kbd> resetar/try again</li>
-                        </ul>
-                        <button class="btn form-control" id="btn_hideManual">ok!</button>            
-                    </div>    
-                </div>
+
+<body>
+    <div class="porta-canvas">
+        <canvas id="game_canvas" class="game-canvas"></canvas>
+    </div>
+    <div class="overlay">
+        <div class="container py-5 hidden" id="manual">
+    <div class="card shadow mx-auto" style="width: fit-content; background-color: rgba(255,255,255,0.4); margin-top:-16em;">
+        <div class="card-body">
+            <ul class="hidden">
+                <li><kbd>w</kbd> acelerar/gas</li>
+                <li><kbd>s</kbd> freiar/brake</li>
+                <li><kbd>a</kbd> esquerda/left</li>
+                <li><kbd>d</kbd> direita/right</li>
+                <li><kbd>m</kbd> freio de mão/emergency brake</li>
+                <li><kbd>r</kbd> resetar/try again</li>
+            </ul>
+            <h1 class="text-center">🤡</h1>
+            <p><b>Quem faz o palhaço rir?</b></p>
+            <p>Você vai fazer,<br/>se não dirigir</br>ou se da rua tentar sair!<p>
+            <button class="btn btn-secondary form-control" id="btn_hide_manual">ok!</button>            
+        </div>    
+    </div>
+</div>
+        <div class="container-sm py-5 hidden" id="try_again" style="max-width:fit-content">
+    <div class="card shadow" style="background-color: rgba(255,255,255,0.75);">
+        <div class="card-body">
+            <h1 class="text-center" id="h1_total_score"></h1>
+            <h4 class="text-center" id="h1_best_score"></h4>
+            <div class="btn-group d-flex">
+                <button class="w-100 btn btn-secondary" id="btn_try_again">😞<br/>tentar de novo?</button>        
+                <button class="w-100 btn btn-ghost" id="btn_view_leaderboard">👀<br/>ver placar</button>        
             </div>
-            <div class="container-sm py-4 hidden" id="playerName">
-                <div class="card shadow mx-auto" style="width: fit-content;">
-                    <div class="card-body">
-                        <h1 class="text-center" id="lb_finalScore">🤡 nome?</h1>
-                        <form id="fm_playerName">
-                            <label for="in_playerName"></label>
-                            <input type="text" minlength="3" maxlength="20" class="form-control mb-4" pattern="[A-Za-z0-9]+" id="in_playerName" placeholder="nome/name?"/>
-                            <input type="submit" class="btn form-control" id="btn_hideManual"/>            
-                        </form>
-                    </div>    
-                </div>
+        </div>
+    </div>
+</div>
+        <div class="container-sm py-5 hidden" id="leaderboard">
+    <div class="card shadow" style="background-color: rgba(255,255,255,0.75);">
+        <div class="card-body" style="overflow-y: scroll;max-height:50svh;">
+            <table class="table" id="tb_leaderboard">
+                <tr><td>#</td><td></td><td></td></tr>
+                <tr><td>1 🥇</td><td>El Gato</td><td>6.0km</td></tr>
+                <tr><td>2 🥈</td><td>El Gato</td><td>6.0km</td></tr>
+                <tr><td>3 🥉</td><td>El Gato</td><td>6.0km</td></tr>
+                <tr><td>99</td><td>Você</td><td>0.0km</td></tr>
+            </table>
+        </div>
+        <div class="card-body">
+            <button class="btn btn-secondary form-control" id="btn_hide_leaderboard">ok</button>        
+        </div>
+    </div>
+</div>
+
+        <div class="container-sm py-4 hidden" id="player_name">
+    <div class="card shadow mx-auto" style="width: fit-content;">
+        <div class="card-body">
+            <form id="fm_player_name">
+                <label class="form-label text-center" for="in_player_name">Qual é seu nome?</label>
+                <input type="text" maxlength="20" class="form-control mb-4" pattern="[A-Za-z0-9\W]+" id="in_player_name" placeholder="nome/name?"/>
+                <label class="invalid-feedback mb-3" id="lb_playername_feedback" style="display:block"></label>
+                <input type="submit" class="btn form-control btn-secondary"/>            
+            </form>
+        </div>    
+    </div>
+</div>
+        <div class="container-fluid" id="touch_controls" >
+    <div class="d-flex flex-row justify-content-between align-items-end">
+        <div class="d-flex flex-column">
+            <div>
+                <div class="btn touch-btn-sm mb-5" data-kb="s" data-tutorial="freio"></div>        
+                <div class="btn touch-btn-sm mx-3 mb-1" data-kb="m" data-tutorial="freio de mão"></div>    
             </div>
-            <div class="container-sm py-5 hidden" id="leaderboard">
-                <div class="card shadow" style="background-color: rgba(255,255,255,0.75);">
-                    <div class="card-body" style="overflow-y: scroll;max-height:50svh;">
-                        <table class="table" id="tb_Leaderboard">
-                            <tr><td>#</td><td></td><td></td></tr>
-                            <tr><td>1 🥇</td><td>El Gato</td><td>6.0km</td></tr>
-                            <tr><td>2 🥈</td><td>El Gato</td><td>6.0km</td></tr>
-                            <tr><td>3 🥉</td><td>El Gato</td><td>6.0km</td></tr>
-                            <tr><td>99</td><td>Você</td><td>0.0km</td></tr>
-                        </table>
-                    </div>
-                    <div class="card-body">
-                        <button class="btn form-control" id="btn_tryAgain">tentar de novo?😞</button>        
-                    </div>
-                </div>
-            </div>
-            <div class="container-fluid" id="touchControls">
-                <div class="d-flex flex-row justify-content-between align-items-end">
-                    <div class="d-flex flex-column">
-                        <div class="btn touch-btn-sm mb-3" data-kb="s"></div>    
-                        <div class="btn touch-btn" data-kb="w"></div>
-                    </div>
-                    <div class="d-flex flex-row">
-                        <div class="btn touch-btn-sm mx-3" data-kb="a"></div>
-                        <div class="btn touch-btn-sm" data-kb="d"></div>    
-                    </div>
-                </div>
-            </div>
-        </div>            
-    </body>
+            <div class="btn touch-btn" data-kb="w" data-tutorial="acelerar"></div>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="btn touch-btn-sm mx-3" data-kb="a"></div>
+            <div class="btn touch-btn-sm" data-kb="d"></div>    
+        </div>
+    </div>
+</div>
+    </div>
+</body>
+
 </html>

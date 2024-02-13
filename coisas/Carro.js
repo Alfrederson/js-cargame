@@ -1,5 +1,6 @@
 import { GAME_GASOLINA_INICIAL } from "../config"
 import { Camera } from "./Camera"
+import * as collision from "./Collision"
 
 import { clamp, vec2_len } from "./util"
 
@@ -82,6 +83,8 @@ function CarroConfig(options){
 
 class Carro {
     rpm = 0
+    marcha = 0
+
 
     heading = 0
     position = [0,0];
@@ -109,9 +112,49 @@ class Carro {
 
     gasolina = GAME_GASOLINA_INICIAL
 
+    get shapes(){
+        return [{
+            type : collision.RECT,
+            position : this.position,
+            width : this.config.halfWidth*2,
+            depth : this.config.cgToFront + this.config.cgToRear,
+            angle : this.heading,
+        }]
+    }
+
+    get corners(){
+        const cos = Math.cos(this.heading)
+        const sin = Math.sin(this.heading)
+
+        const [x,y] = this.position
+
+        const
+            // esquerda trás
+            x0 = -this.config.cgToRear,
+            y0 = -this.config.halfWidth,
+            // esquerda frente
+            x1 = +this.config.cgToRear,
+            y1 = -this.config.halfWidth,
+            // direita frente
+            x2 = +this.config.cgToRear,
+            y2 = +this.config.halfWidth,
+            // direita trás
+            x3 = -this.config.cgToRear,
+            y3 = +this.config.halfWidth
+        return [
+            [x+x0*cos - y0*sin, y+y0*cos + x0*sin],
+            [x+x1*cos - y1*sin, y+y1*cos + x1*sin],
+            [x+x2*cos - y2*sin, y+y2*cos + x2*sin],
+            [x+x3*cos - y3*sin, y+y3*cos + x3*sin],
+        ]    
+    }
+
     reset(){
         this.gasolina = GAME_GASOLINA_INICIAL
+
         this.rpm = 0
+        this.marcha = 0
+
         this.heading = 0
         this.position = [0,0]
         this.velocity = [0,0]
@@ -153,18 +196,12 @@ class Carro {
      * @param {CarroConfigOptions} [config] 
      */
     constructor(config){
-        
-        // if(!config)
-        //     throw "cade o config?"
-
         this.config = CarroConfig(config)
 
         this.inertia = this.config.mass * this.config.inertiaScale
         this.wheelBase = this.config.cgToFrontAxle + this.config.cgToRearAxle
         this.axleWeightRatioFront = this.config.cgToRearAxle / this.wheelBase
         this.axleWeightRatioRear = this.config.cgToFrontAxle / this.wheelBase
-
-        let cfg = this.config
     }
 
 
@@ -183,17 +220,41 @@ class Carro {
             this.gasolina = 0
             this.input.throttle = 0
         }
-
-        if (this.input.throttle) {
-            this.rpm += (17 - this.rpm) * 0.005
-            if (this.rpm > 15) this.rpm = 12
-
+        if(this.input.throttle){
+            this.rpm += (17-this.rpm) * 0.005
             this.gasolina -= this.rpm * 0.008
-        } else {
+        }else{
             this.rpm -= 0.2
-            if (this.rpm < 4)
-                this.rpm = 4
         }
+        if(this.input.brake){
+            this.rpm -= 0.5
+        }
+        // troca de marcha
+        if(this.rpm > 11){
+            if(this.marcha < 3){
+                this.marcha++
+                this.rpm = 8
+            }
+        }
+        if(this.rpm < 3){
+            if(this.marcha > 0){
+                this.marcha --
+                this.rpm = 3
+            }else{
+                this.rpm = 3
+            }
+        }
+
+        // if (this.input.throttle) {
+        //     this.rpm += (17 - this.rpm) * 0.005
+        //     if (this.rpm > 15) this.rpm = 12
+
+        //     this.gasolina -= this.rpm * 0.008
+        // } else {
+        //     this.rpm -= 0.2
+        //     if (this.rpm < 4)
+        //         this.rpm = 4
+        // }
 
         this.doSteering()
         const cfg = this.config

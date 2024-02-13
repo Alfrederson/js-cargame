@@ -125,14 +125,44 @@ export function fazer( chave ){
     }
 }
 
+export function nunca(oque){
+    return localStorage.getItem(oque)==null
+}
+
+
+export function se_nunca(oque){
+    if(localStorage.getItem(oque)==null){
+        return {
+            entao : x => x()
+        }
+    }else{
+        return {
+            entao : x=> 0
+        }
+    }
+}
+export function agora_ja(oque){
+    localStorage.setItem(oque,"ja")
+}
+export function passo_a_passo(...passos){
+    let promise
+    for(let passo of passos){
+        promise = promise
+            ? promise.then( () => new Promise(passo) )
+            : new Promise( passo )
+    }
+    return promise    
+}
+
+
 export function passo( callback ){
     return new Promise( callback )
 }
 
 
 export function gerarTrecho(){
-    const comprimento = 40*Math.round( (1+Math.random()*9) )/10
-    const angulo = 0.4*Math.round( 1+Math.random()*9 )/10
+    const comprimento = 10 + 15*Math.round( (1+Math.random()*9) )/10
+    const angulo = 0.3*Math.round( 1+Math.random()*99 )/100
     const radius = comprimento/angulo
     return {
         radius,
@@ -141,12 +171,18 @@ export function gerarTrecho(){
 }
 
 export function $(id){
-    return document.getElementById(id)
+    let e = document.getElementById(id)
+    if(!e){
+        throw "elemento "+id+" não existe"
+    } 
+    return e
 }
 
 export function show(e){
     e.classList.remove("hidden")
+    return e
 }
 export function hide(e){
     e.classList.add("hidden")
+    return e
 }
