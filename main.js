@@ -350,13 +350,15 @@ document.addEventListener("DOMContentLoaded", function (event) {
     function fitCanvas(){
       // idealmente a gente tem que limpar camera...
       game.ctx.clearRect(0,0,game.canvas.width,game.canvas.height)
-      const {height,width} = document.body.getBoundingClientRect()
+      const [height,width] = [window.innerHeight, window.innerWidth]
+      document.body.style.width = width+"px"
+      document.body.style.height = height+"px"
       if(height > width){
         game.camera.screenWidth = SCREEN_WIDTH
         game.camera.screenHeight = SCREEN_WIDTH * (height/width)
       }else{
-        game.camera.screenWidth = SCREEN_HEIGHT * (width/height)
         game.camera.screenHeight = SCREEN_HEIGHT
+        game.camera.screenWidth = SCREEN_HEIGHT * (width/height)
       }
       game.canvas.width = game.camera.screenWidth
       game.canvas.height = game.camera.screenHeight

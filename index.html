@@ -17,20 +17,19 @@
     <link href="bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            /* width: 100svw;
-            height: 100svh; */
             overflow: hidden;
-            /* display: flex; */
             padding: 0;
             margin: 0;
             font-family: monospace;
             font-size: 16px;
-            /* align-items: center; */
+            align-items: center;
             user-select: none;
-            background-color: lightslategray;
+            background-color: #789;
+            display:table-cell;
         }
 
         .porta-canvas {
+            position: relative;
             height: 100%;
             z-index: 5;
             pointer-events: none;
@@ -42,19 +41,18 @@
         }
 
         .game-canvas {
+            position:fixed;
             width: 100%;
             height: 100%;
             image-rendering: pixelated;
-            object-fit: contain;
             z-index: 1
         }
 
         .tresDe {
-            margin-left: auto;
-            margin-right: auto;
-            position: absolute;
+            position: fixed;             
+            left:0px;
+            top:0px;
             image-rendering: pixelated;
-            z-index: 2;
         }
 
         .hidden {
@@ -63,12 +61,16 @@
 
         .overlay {
             position: fixed;
-            /* width: 100svw;
-            height: 100svh; */
+            width:100%;
+            height:100%;
             z-index: 5;
-            align-content: center;
-            align-items: center;
-            display: flex;
+        }
+
+        .janelas {
+            position: fixed;
+            width:100%;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         div[data-tutorial-visible]::after {
@@ -76,6 +78,8 @@
             background-color: black;
             color:white;
             width:fit-content;
+            text-align: center;
+            align-self: start;
             white-space: nowrap;
             padding:0.25em;
             border-radius: 0.5em;
@@ -91,8 +95,6 @@
             }
         }
 
-
-        /* @media (hover:none){ */
         [data-kb=w] {
             background-image: url(pedal_gas.png);
         }
@@ -115,12 +117,11 @@
 
 
         #touch_controls {
-            display: block;
             position: fixed;
-            left: 0px;
+            width:100%;
             bottom: 0px;
             margin-bottom: 1em;
-            opacity: 0.6;
+            opacity: 0.8;
         }
 
         .touch-down {
@@ -146,8 +147,6 @@
             height: 4em;
             border-radius: 2em;
         }
-
-        /* } */
     </style>
     <script src="./main.js" type="module"></script>
     <!-- Google tag (gtag.js) -->
@@ -165,11 +164,12 @@
         <canvas id="game_canvas" class="game-canvas"></canvas>
     </div>
     <div class="overlay">
-        <part:manual/>
-        <part:try_again/>
-        <part:leaderboard/>
-
-        <part:player_name/>
+        <div class="janelas">
+            <part:manual/>
+            <part:try_again/>
+            <part:leaderboard/>
+            <part:player_name/>
+        </div>
         <part:touch_controls/>
     </div>
 </body>
