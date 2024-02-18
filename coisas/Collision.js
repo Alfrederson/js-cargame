@@ -1,9 +1,11 @@
+//@ts-check
+
 // ARC
 // { type : ARC, position : this.center, from : this.from, to : this.to, radius : this.radius + this.width/2 }
 // RECT
 //             
 
-import { vec2_dp, vec2_mul } from "./util"
+import * as vec2 from "./vec2"
 
 // type : collision.RECT,
 // position : this.position,
@@ -21,7 +23,7 @@ export const ARC = 2
  * @interface
  */
 class Shape{
-    get shapes(){}
+    type=0
 }
 
 /** 
@@ -67,7 +69,7 @@ const pares = {
  * @param {Retangulo} rect 
  * @param {number} cos - cosseno do angulo
  * @param {number} sin - seno do angulo.
- * @returns {number[]} 
+ * @returns {number[][]} 
  */
 function rect_corners(rect,cos,sin){
     const [x,y] = rect.position
@@ -129,10 +131,10 @@ function retangulo_retangulo(a,b, output){
         let max2 = -Number.MAX_VALUE;
         // retangulo tem 4 cantos! eu espero.
         for(let j = 0; j < 4; j++){
-            let dot = vec2_dp(corners_a[j], axis)
+            let dot = vec2.dp(corners_a[j], axis)
             min1 = Math.min(min1, dot)
             max1 = Math.max(max1, dot)
-            dot = vec2_dp(corners_b[j], axis)
+            dot = vec2.dp(corners_b[j], axis)
             min2 = Math.min(min2,dot)
             max2 = Math.max(max2,dot)
         }
@@ -149,7 +151,7 @@ function retangulo_retangulo(a,b, output){
 
     output.debug = "1 x 1"
 
-    output.mtv = vec2_mul( axes[smallestAxis], minimumOverlap )
+    output.mtv = vec2.mul( axes[smallestAxis], minimumOverlap )
     return true
 }
 
@@ -162,10 +164,21 @@ function retangulo_arco(a,b, output){
     console.log("retangulo x arco")
 }
 
+
+/** @interface */
+class CoisaComShapes{
+    /**
+     * @return {Shape[]}
+     */
+    get shapes() {
+        return []
+    }
+}
+
 /**
  * 
- * @param {Shape} a 
- * @param {Shape} b 
+ * @param {CoisaComShapes} objA
+ * @param {CoisaComShapes} objB 
  * @param {object} output 
  */
 export function colidem(objA,objB, output){

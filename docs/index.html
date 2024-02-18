@@ -5,24 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
+    <!-- meta tag-->
+    <meta property="og:title" content="Burnout Turbo 64">
+    <meta property="og:description" content="Até que ponto você vai?">
+    <meta property="og:image" content="https://burnout-64.web.app/miniature.jpg">
+    <meta property="og:image:width" content="1024">
+    <meta property="og:image:height" content="1024">
+    <meta property="og:type" content="website">
+
     <title>Burnout Turbo 64</title>
     <link href="bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            width: 100svw;
-            height: 100svh;
             overflow: hidden;
-            display: flex;
             padding: 0;
             margin: 0;
             font-family: monospace;
             font-size: 16px;
             align-items: center;
             user-select: none;
-            background-color: lightslategray;
+            background-color: #789;
+            display:table-cell;
         }
 
         .porta-canvas {
+            position: relative;
             height: 100%;
             z-index: 5;
             pointer-events: none;
@@ -34,19 +41,18 @@
         }
 
         .game-canvas {
+            position:fixed;
             width: 100%;
             height: 100%;
             image-rendering: pixelated;
-            object-fit: contain;
             z-index: 1
         }
 
         .tresDe {
-            margin-left: auto;
-            margin-right: auto;
-            position: absolute;
+            position: fixed;             
+            left:0px;
+            top:0px;
             image-rendering: pixelated;
-            z-index: 2;
         }
 
         .hidden {
@@ -55,12 +61,16 @@
 
         .overlay {
             position: fixed;
-            width: 100svw;
-            height: 100svh;
+            width:100%;
+            height:100%;
             z-index: 5;
-            align-content: center;
-            align-items: center;
-            display: flex;
+        }
+
+        .janelas {
+            position: fixed;
+            width:100%;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         div[data-tutorial-visible]::after {
@@ -68,6 +78,8 @@
             background-color: black;
             color:white;
             width:fit-content;
+            text-align: center;
+            align-self: start;
             white-space: nowrap;
             padding:0.25em;
             border-radius: 0.5em;
@@ -83,8 +95,6 @@
             }
         }
 
-
-        /* @media (hover:none){ */
         [data-kb=w] {
             background-image: url(pedal_gas.png);
         }
@@ -107,12 +117,11 @@
 
 
         #touch_controls {
-            display: block;
             position: fixed;
-            left: 0px;
+            width:100%;
             bottom: 0px;
             margin-bottom: 1em;
-            opacity: 0.6;
+            opacity: 0.8;
         }
 
         .touch-down {
@@ -138,10 +147,7 @@
             height: 4em;
             border-radius: 2em;
         }
-
-        /* } */
-    </style>
-
+    </style>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-QT4FGLR6K6"></script>
     <script>
@@ -150,7 +156,7 @@
         gtag('js', new Date());
         gtag('config', 'G-QT4FGLR6K6');
     </script>
-  <script type="module" crossorigin src="assets/index-kpEGlvIb.js"></script>
+  <script type="module" crossorigin src="/assets/index-b2wcBnEs.js"></script>
 </head>
 
 <body>
@@ -158,8 +164,9 @@
         <canvas id="game_canvas" class="game-canvas"></canvas>
     </div>
     <div class="overlay">
-        <div class="container py-5 hidden" id="manual">
-    <div class="card shadow mx-auto" style="width: fit-content; background-color: rgba(255,255,255,0.4); margin-top:-16em;">
+        <div class="janelas">
+            <div class="container hidden" id="manual">
+    <div class="card shadow" style="background-color: rgba(255,255,255,0.4); margin-top:-16em;">
         <div class="card-body">
             <ul class="hidden">
                 <li><kbd>w</kbd> acelerar/gas</li>
@@ -176,7 +183,7 @@
         </div>    
     </div>
 </div>
-        <div class="container-sm py-5 hidden" id="try_again" style="max-width:fit-content">
+            <div class="container py-5 hidden" id="try_again" style="max-width:fit-content">
     <div class="card shadow" style="background-color: rgba(255,255,255,0.75);">
         <div class="card-body">
             <h1 class="text-center" id="h1_total_score"></h1>
@@ -188,7 +195,7 @@
         </div>
     </div>
 </div>
-        <div class="container-sm py-5 hidden" id="leaderboard">
+            <div class="container-sm py-5 hidden" id="leaderboard">
     <div class="card shadow" style="background-color: rgba(255,255,255,0.75);">
         <div class="card-body" style="overflow-y: scroll;max-height:50svh;">
             <table class="table" id="tb_leaderboard">
@@ -204,8 +211,7 @@
         </div>
     </div>
 </div>
-
-        <div class="container-sm py-4 hidden" id="player_name">
+            <div class="container-sm py-4 hidden" id="player_name">
     <div class="card shadow mx-auto" style="width: fit-content;">
         <div class="card-body">
             <form id="fm_player_name">
@@ -217,6 +223,7 @@
         </div>    
     </div>
 </div>
+        </div>
         <div class="container-fluid" id="touch_controls" >
     <div class="d-flex flex-row justify-content-between align-items-end">
         <div class="d-flex flex-column">

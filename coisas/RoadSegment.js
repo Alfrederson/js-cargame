@@ -1,5 +1,9 @@
+//@ts-check
+
 import { ARC } from "./Collision"
-import { dist2d, vec2_sub } from "./util"
+import { dist2d } from "./util"
+
+
 const EDGE_LENGTH = 6
 const WAYPOINT_SPACING = 4
 class RoadSegment{
@@ -7,9 +11,23 @@ class RoadSegment{
     radius
     from
     to
-  
+
+    /** @type {RoadSegment?}*/
     prev
+    /** @type {RoadSegment?}*/
     next
+
+    removed=false
+
+    remove(){
+      if(this.removed)
+        return
+      if(this.next)
+        this.next.prev = this.prev
+      if(this.prev)
+        this.prev.next = this.next
+      this.removed = true
+    }
   
     width
   
@@ -62,7 +80,7 @@ class RoadSegment{
 
     /**
      * vê se uma lista de pontos está contida dentro desse segmento.
-     * @param {number[]} arg0 
+     * @param {number[]} ponto 
      * @returns {boolean}
      */
     containsPoint(ponto) {
@@ -236,7 +254,8 @@ class RoadSegment{
       this.generateVertices()
   
       // calcula os pontos do aabb
-      this.aabb = this.getAABB()
+      // vou usar isso pro que? não sei ainda
+      // this.aabb = this.getAABB()
     }
 
     /**
@@ -253,10 +272,11 @@ class RoadSegment{
     }
 
     get startOrientation(){
-      return (this.from+(this.clockwise?1:-1))*Math.PI      
+      return (this.from+(this.clockwise?0.5:-0.5))*Math.PI      
     }
+    // (segment.from + (segment.clockwise ? 0.5 : -0.5)) * Math.PI
     get endOrientation(){
-      return (this.from+this.to+(this.clockwise?1:-1))*Math.PI      
+      return (this.from+this.to+(this.clockwise?0.5:-0.5))*Math.PI      
     }
   
     get endPointLeft(){
@@ -299,38 +319,38 @@ class RoadSegment{
     }
 
   
-    getAABB(){
-      const points = [
-        this.startPointLeft,
-        this.startPointRight,
-        this.endPointLeft,
-        this.endPointRight
-      ];
-      let minX = points[0][0]
-      let minY = points[0][1]
-      let maxX = points[0][0]
-      let maxY = points[0][1]
-      for(const point of points){
-        if( point[0] < minX){
-          minX = point[0]
-        }
-        if( point[0] > maxX){
-          maxX = point[0]
-        }
-        if( point[1] < minY){
-          minY = point[1]
-        }
-        if( point[1] > maxY){
-          maxY = point[1]
-        }
-      }
-      return [
-        minX,
-        minY,
-        maxX- minX,
-        maxY- minY
-      ]
-    }
+    // getAABB(){
+    //   const points = [
+    //     this.startPointLeft,
+    //     this.startPointRight,
+    //     this.endPointLeft,
+    //     this.endPointRight
+    //   ];
+    //   let minX = points[0][0]
+    //   let minY = points[0][1]
+    //   let maxX = points[0][0]
+    //   let maxY = points[0][1]
+    //   for(const point of points){
+    //     if( point[0] < minX){
+    //       minX = point[0]
+    //     }
+    //     if( point[0] > maxX){
+    //       maxX = point[0]
+    //     }
+    //     if( point[1] < minY){
+    //       minY = point[1]
+    //     }
+    //     if( point[1] > maxY){
+    //       maxY = point[1]
+    //     }
+    //   }
+    //   return [
+    //     minX,
+    //     minY,
+    //     maxX- minX,
+    //     maxY- minY
+    //   ]
+    // }
   
     closestPoint(x,y){
       // angulo do centro até x,y
@@ -362,6 +382,11 @@ class RoadSegment{
         dx
       ]
     }
+    /**
+     * 
+     * @param {{radius:number,to:number}} param0 
+     * @returns 
+     */
     continue({radius, to}){    
       const dX = Math.cos((this.from+this.to)*Math.PI)
       const dY = Math.sin((this.from+this.to)*Math.PI)
@@ -393,6 +418,46 @@ class RoadSegment{
       return result
     }
 
+
+    /**
+     * Dá o x, y e orientação indo x metros a pertir do começo.
+     * @param {number} length
+     * @param {number} side 
+     * @returns {{position: number[], rotation: number, segment: RoadSegment?, nextPos:number}}
+     */
+    evalPoint(length, side){
+      const anglesPerMeter = (this.to)/this.length
+      let angle = this.from + anglesPerMeter*length
+      let nextPos = length
+      const [x,y] = this.center
+      let nextSegment = this
+      if(length > this.length){
+        // @ts-ignore
+        nextSegment = this.next
+        if(nextSegment){
+          nextPos = length-this.length
+        }
+      }
+      if(length < 0){
+        // @ts-ignore
+        nextSegment = this.prev
+        if(nextSegment){
+          nextPos = nextSegment.length + length
+        }
+      }
+      const cos = Math.cos(angle * Math.PI)
+      const sin = Math.sin(angle * Math.PI)      
+      return {
+        position : [
+          x + cos * (this.radius + this.width * 0.25 * side * (this.clockwise ?1:-1)),
+          y + sin * (this.radius + this.width * 0.25 * side * (this.clockwise ?1:-1))
+        ],
+        rotation : this.clockwise ? -angle-0.5*side : -angle+0.5*side,
+        segment : nextSegment,
+        nextPos : nextPos
+      }
+    }
+
     drawAsphalt(ctx,camera){
       ctx.save()
       ctx.beginPath()
@@ -414,10 +479,15 @@ class RoadSegment{
     draw(ctx, camera){
       this.drawAsphalt(ctx, camera)
       // tracejado
-      ctx.strokeStyle="#F0CD0E"
+      
       ctx.lineWidth = 3
       const waypointCount = this.waypoints.length
       for(let i = 0; i < waypointCount; i+=2){
+        if(i==0){
+          ctx.strokeStyle = "green"
+        }else{
+          ctx.strokeStyle="#F0CD0E"
+        }
         if(i < waypointCount-1 ){
           ctx.beginPath()
           ctx.moveTo( ...camera.translate(this.waypoints[i]) )
@@ -425,9 +495,8 @@ class RoadSegment{
           ctx.stroke()
         }
       }
-      if(this.next){
+      if(this.next)
         this.next.draw(ctx, camera)
-      }
     }
 
    [Symbol.iterator]() {
@@ -436,6 +505,7 @@ class RoadSegment{
       next() {
         if (current) {
           let value = current
+          // @ts-ignore
           current = current.next
           return { value, done: false }
         } else {
@@ -444,6 +514,6 @@ class RoadSegment{
       }
     }
   }
-  }
+}
 
   export { RoadSegment }

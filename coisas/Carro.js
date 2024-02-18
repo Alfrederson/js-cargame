@@ -1,8 +1,12 @@
+//@ts-check
 import { GAME_GASOLINA_INICIAL } from "../config"
 import { Camera } from "./Camera"
 import * as collision from "./Collision"
 
-import { clamp, vec2_len } from "./util"
+import * as vec2 from "./vec2"
+import { clamp } from "./util"
+
+import { GameObject } from "./TresDe"
 
 /**
  * @typedef {Object} CarroConfigOptions
@@ -82,9 +86,12 @@ function CarroConfig(options){
 }
 
 class Carro {
+
+    /** @type {GameObject} */
+    obj = null
+
     rpm = 0
     marcha = 0
-
 
     heading = 0
     position = [0,0];
@@ -176,6 +183,7 @@ class Carro {
         const cfg = this.config
         ctx.save()
 
+        // @ts-ignore
         ctx.translate( ...camera.translate(this.position) )
         ctx.rotate( this.heading )
 
@@ -245,17 +253,6 @@ class Carro {
             }
         }
 
-        // if (this.input.throttle) {
-        //     this.rpm += (17 - this.rpm) * 0.005
-        //     if (this.rpm > 15) this.rpm = 12
-
-        //     this.gasolina -= this.rpm * 0.008
-        // } else {
-        //     this.rpm -= 0.2
-        //     if (this.rpm < 4)
-        //         this.rpm = 4
-        // }
-
         this.doSteering()
         const cfg = this.config
         const sin = Math.sin( this.heading )
@@ -321,7 +318,7 @@ class Carro {
         this.velocity[0] += this.accel[0] * dt
         this.velocity[1] += this.accel[1] * dt
 
-        this.absVel = vec2_len( this.velocity )
+        this.absVel = vec2.len( this.velocity )
 
         // forças rotacionais
         let angularTorque = (frictionForceFront_cy + tractionForce_cy) * cfg.cgToFrontAxle - frictionForceRear_cy*cfg.cgToRearAxle

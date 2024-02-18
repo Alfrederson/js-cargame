@@ -22,7 +22,8 @@ import {
     NearestFilter,
     RepeatWrapping,
     PlaneGeometry,
-    InstancedMesh
+    InstancedMesh,
+    Material
 } from 'three'
 
 import {
@@ -150,6 +151,9 @@ let cena = {
     /** @type {Mesh?} */
     arco : undefined,
 
+    /** @type {GameObject[]} */
+    objects : [],
+
     carro : new Object3D(), // isso é só o centro do carro.
 
 
@@ -161,6 +165,10 @@ let cena = {
 
     /** @type {PerspectiveCamera?} */
     camera : undefined,
+
+    /** @type {Object3D} */
+    cameraRoot : new Object3D(),
+
 
     /** @type {Scene?} */
     scene : undefined,
@@ -190,6 +198,116 @@ let cena = {
 
 /** @type {GLTFLoader} */
 const loader = new GLTFLoader()
+
+const meshMap = new Map()
+
+
+export class GameObject {
+    /**
+     * @param {number} r
+     * @param {number} g
+     * @param {number} b
+     */
+    setColor(r, g, b) {
+        this.material && this.material.color.set(r,g,b)
+    }
+    root = new Object3D()
+
+    /** @type {Object3D?} */
+    model = undefined
+
+    /** @type {MeshStandardMaterial?} */
+    material = undefined
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    setPos(x,y,z){
+        this.root.position.set(x,y,z)
+        return this
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    setRot(x,y,z){
+        this.root.rotation.set(x,y,z)
+        return this
+    }
+    /**
+     * marca o objeto para ser removido no próximo loop.
+     */
+    remove(){
+        if(this.material){
+            this.material.dispose()
+        }
+        cena.scene.remove(this.root)
+    }
+
+
+    hide(){
+        this.root.visible = false
+    }
+}
+
+/**
+ * 
+ * @param {string} modelName 
+ * @returns {GameObject}
+ */
+export function addObject(modelName, {scale, rotation}){
+    const obj = new GameObject()
+
+    // pega um mesh...
+    const existing = meshMap.get(modelName)
+    if(!existing){
+        // carrega.
+        console.log("carregando ",modelName)
+        loader.load( `./${modelName}.gltf`, function({scene,scenes,cameras,animations,asset}){
+            console.log("carregado ",modelName)
+            scene.rotation.y = rotation
+            scene.scale.set(scale,scale,scale)
+            let mat = scene.children[0].material
+            if(mat && mat.map){
+                pixelate(mat.map)
+            }else{
+                mat = new MeshStandardMaterial({color:0xFF00FF})
+                console.log("novo material rosa")
+            }
+            meshMap.set(modelName,{
+                mesh : scene,
+                material : mat
+            })
+            // clonba a cena...
+            const copy = scene.clone()
+            const copyMat = mat.clone()
+
+            copy.children[0].material = copyMat
+            obj.root.add(copy)
+            obj.model = copy
+
+            obj.material = copyMat
+        })
+    }else{
+        const {mesh,material} = existing
+        const copy = mesh.clone()   
+        const copyMat = material.clone()
+
+        copy.children[0].material = copyMat
+
+        obj.root.add(copy)
+        obj.model = copy
+        obj.material = copyMat        
+    }
+
+    cena.objects.push(obj)
+    cena.scene.add(obj.root)
+    return obj
+}
 
 /**
  * Faz o three.js ficar na proporção certa pra ficar responsável
@@ -250,19 +368,19 @@ export function init(element){
     )
 
     // não estou usando isso aqui ainda por causa do base do vite.
-    loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
-        scene.rotation.y = Math.PI*0.5
-        scene.scale.set(1.2,1.2,1.2)
-        let mat = scene.children[0].material
-        pixelate(mat.map)
-        cena.carroBody = scene
-        cena.carro.add(scene)
-    })
+
+
+    // loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
+    //     scene.rotation.y = Math.PI*0.5
+    //     scene.scale.set(1.2,1.2,1.2)
+    //     let mat = scene.children[0].material
+    //     pixelate(mat.map)
+    //     cena.carroBody = scene
+    //     cena.carro.add(scene)
+    // })
 
     // texturas e etc.
     const textureLoader = new TextureLoader()
-
-
 
     textureLoader.load("./rua.png", textura =>{
         textura.wrapS = RepeatWrapping
@@ -294,26 +412,38 @@ export function init(element){
     })    
 
     cena.scene.add( cena.carro )
-    cena.carro.add( cena.camera )
+    cena.cameraRoot.add( cena.camera )
 
-    cena.camera.position.z = 5
-    cena.camera.position.y = 5
-    cena.camera.lookAt(new Vector3(0,0,0))
+
+
+    cena.scene.add( cena.cameraRoot )
+
+    // cena.carro.add( cena.camera )
+
+     cena.camera.position.z = 5
+     cena.camera.position.y = 5
+     cena.camera.lookAt(new Vector3(0,0,0))
 }
 
 // como o carro vai ser só um mesh "estático", isso é aceitável.
 let oldX = 0, oldY = 0, driftCounter=0
 /**
  * @param {Carro} carro
+ * @param {GameObject} obj
  */
-export function posicionarCarro( carro ){
+export function posicionarCarro( carro, obj ){
     const [x,y] = carro.position
     const angulo = carro.heading
-    cena.carro.position.set(x,0,y)
-    if(cena.carroBody)
-        cena.carroBody.rotation.y = -angulo + Math.PI*0.5
+
+    obj.root.position.set(x,0,y)
+    obj.root.rotation.set(0, -angulo,0)
+
+    // cena.carro.position.set(x,0,y)
+    // if(cena.carroBody)
+    //     cena.carroBody.rotation.y = -angulo + Math.PI*0.5
+
     if(cena.state.drifting){
-        if(++driftCounter==2){
+        if( ++driftCounter == 2){
             let dX = x-oldX
             let dY = y-oldY
             let comprimento = Math.sqrt(
@@ -337,39 +467,46 @@ export function posicionarCarro( carro ){
     return this
 }
 
-export function resetarCarro(){
-    cena.state.drifting = false
-    // limpar as explosões...
+export function lookAt( x,y,z ){
+    // let delta = new Vector3(x,y,z).sub(cena.cameraRoot.position).multiplyScalar(0.2)
+    // cena.cameraRoot.position.add(delta)
+    cena.cameraRoot.position.set( x,y,z )
+}
+
+
+export function reset(){
     for(let p of cena.particulas){
         cena.scene.remove(p.object)
     }
     cena.particulas = []
-    // resetar o carro...
-    cena.carro.visible=true
-    return this
+    for(let o of cena.objects){
+        o.remove()
+    }
+    cena.objects = []
 }
 
-export function explodirCarro(){
-    let {x,z} = cena.carro.position
-    let particulas = [
-        new Explosao(x,0,z),
-    ]    
-    let spreadX = 1.2
-    let spreadZ = 1
-    for(let i = 0; i < 10; i++){
-        particulas.push(
-            new Fumaca(
-                x + spreadX * (Math.random() -0.5),
-                0.1,
-                z + spreadZ * (Math.random() -0.5)
-            )
+export const fx = {
+    /**
+     * @param {number} x
+     * @param {any} y
+     * @param {number} z
+     */
+    explosao(x,y,z){
+        cena.addParticula(
+            new Explosao(x,y,z)
         )
+        let spreadX = 1.2
+        let spreadZ = 1
+        for(let i = 0; i < 10; i++){
+            cena.addParticula(
+                new Fumaca(
+                    x + spreadX * (Math.random() -0.5),
+                    0.1,
+                    z + spreadZ * (Math.random() -0.5)
+                )
+            )
+        }
     }
-    for(let particula of particulas){
-        cena.addParticula( particula )
-    }
-    cena.carro.visible=false
-    return this
 }
 
 export function startDrifting(){
@@ -398,60 +535,61 @@ export function render(){
     return this
 }
 
+/**
+ * @param {number} zoom
+ */
 export function setZoom(zoom){
     cena.camera.position.z = 5 + (1- zoom/12)*11
     cena.camera.position.y = 5 + (1- zoom/12)*11
     return this
 }
 
-/**
- * Adiciona um segmento de rua no 3D...
- * @param {RoadSegment} segment 
- */
-export function addRoadSegment(segment){
-    const {vertices,indices,uvs} = segment.generateVertexBuffer(),
-        geometry = new BufferGeometry(),
-        verticesArray = new Float32Array(vertices)
-    geometry
-        .setIndex( indices )
-        .setAttribute('position', new BufferAttribute(verticesArray,3))
-        .setAttribute('uv',new BufferAttribute(new Float32Array(uvs),2))
 
-    // usa um material de rua...
-    const mesh = new Mesh(geometry, cena.mat.road)
-    cena.scene.add( mesh )
-    cena.road.push({mesh,geometry})
-    return this
-}
+export const road = {
+    clear(){
+        cena.road.forEach( x => {
+            cena.scene.remove(x.mesh)
+            x.geometry.dispose()
+        })
+        return this
+    },
+    /**
+     * Adiciona um segmento de rua no 3D...
+     * @param {RoadSegment} segment 
+     */
+    addSegment(segment){
+        const {vertices,indices,uvs} = segment.generateVertexBuffer(),
+            geometry = new BufferGeometry(),
+            verticesArray = new Float32Array(vertices)
+        geometry
+            .setIndex( indices )
+            .setAttribute('position', new BufferAttribute(verticesArray,3))
+            .setAttribute('uv',new BufferAttribute(new Float32Array(uvs),2))
 
-export function posicionarFimDaLinha(x,y,a){
-    cena.fimDaLinha.position.set(x,1,y)
-    cena.fimDaLinha.rotation.set(0,-a,0)
-    return this
-}
-
-export function posicionarArco(x,y,a){
-    cena.arco.position.set(x,3,y)    
-    cena.arco.rotation.set(0,-a,0)
-    return this
-}
-
-// não consegui pensar em um jeito melhor de fazer isso.
-export function removeRoadStart(){
-    let trecho = cena.road.shift()
-    if(trecho){
-        cena.scene.remove(trecho.mesh)
-        trecho.geometry.dispose()
-    }
-    return this
-}
-
-export function clearRoad(){
-    cena.road.forEach( x => {
-        cena.scene.remove(x.mesh)
-        x.geometry.dispose()
-    })
-    return this
+        // usa um material de rua...
+        const mesh = new Mesh(geometry, cena.mat.road)
+        cena.scene.add( mesh )
+        cena.road.push({mesh,geometry})
+        return this
+    },
+    posicionarFimDaLinha(x,y,a){
+        cena.fimDaLinha.position.set(x,1,y)
+        cena.fimDaLinha.rotation.set(0,-a+Math.PI*0.5,0)
+        return this
+    },
+    posicionarArco(x,y,a){
+        cena.arco.position.set(x,3,y)    
+        cena.arco.rotation.set(0,-a+Math.PI*0.5,0)
+        return this
+    },
+    removeRoadStart(){
+        let trecho = cena.road.shift()
+        if(trecho){
+            cena.scene.remove(trecho.mesh)
+            trecho.geometry.dispose()
+        }
+        return this
+    }    
 }
 
 // faz exatamente o que parece.

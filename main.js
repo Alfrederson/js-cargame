@@ -65,8 +65,8 @@ const h = {
 
 // nota: esse módulo não é público!!!!!!!!
 // usar o dummy abaixo para rodar o jogo localmente.
- import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
-//import * as leaderboard from "./coisas/LeaderboardDummy.js"
+// import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
+import * as leaderboard from "./coisas/LeaderboardDummy.js"
 import {
   LEADERBOARD_API_KEY,
   LEADERBOARD_URL,
@@ -75,70 +75,23 @@ import {
 
 import { RoadSegment } from "./coisas/RoadSegment.js"
 import { Carro } from "./coisas/Carro.js"
-import { Camera } from "./coisas/Camera.js"
+
 import * as tresD from "./coisas/TresDe.js"
 import * as audio from "./coisas/Audio.js"
-import { vec2_angle, vec2_add, vec2_mul, vec2_sub, show,hide, gerarTrecho, passo_a_passo, agora_ja, nunca } from "./coisas/util.js"
 
+import * as vec2 from "./coisas/vec2.js"
+
+import { show,hide, gerarTrecho, passo_a_passo, agora_ja, nunca } from "./coisas/util.js"
 import { game_step } from "./game_step.js"
 
 import { host } from "./coisas/AndroidHost.js"
 
+import { GameState } from "./GameState.js"
+import { CarroZumbi } from "./coisas/CarroZumbi.js"
+
 const android = host()
 
-const game = {
-  /** @type { Camera } */
-  camera : new Camera(SCREEN_WIDTH,SCREEN_HEIGHT),
-  /** @type { Carro? } */
-  carro : undefined,
-  /** @type { RoadSegment? } */
-  road : undefined,
-  /** @type { RoadSegment? } */
-  targetSegment : undefined,
-  /** @type { RoadSegment? } */
-  lastSegment: undefined,
-  /** @type { RoadSegment? } */
-  firstSegment: undefined,
-  /** @type { CanvasRenderingContext2D? } */
-  ctx: undefined,
-  /** @type { HTMLCanvasElement? } */
-  canvas: undefined,
-
-  // contador de frames pra coisas aleatórias
-  frames :0,
-
-  distToTarget : 0,
-
-  // contador de frames de drifting. não serve pra nada!
-  driftHysteresis:0,
-  driftLength:0,
-
-  tutorial : false,
-  valendo : false,
-  framesAteValer : 60,
-  gasolina : GAME_GASOLINA_INICIAL,
-  framesParado : 0,
-  carroExplodiu : false,
-  velocidadeAlvo : 3,
-  distancia : 0,
-  maiorDistancia : 0,
-
-  // isso é pro placar.
-  identidade : {},
-
-  reset(){
-    this.velocidadeAlvo = 3
-    this.distancia = 0
-    this.valendo = false
-    this.framesAteValer = 60
-    this.gasolina = GAME_GASOLINA_INICIAL
-    this.framesParado = 0
-    this.carroExplodiu = false
-    this.driftHysteresis=0,
-    this.driftLength=0,
-    this.camera.zoom = 10
-  }
-}
+const game = new GameState()
 
 const sfx = {
   engine : new audio.Engine(audio.context),
@@ -150,8 +103,11 @@ const sfx = {
 function init_game(){
   const maiorDistanciaSalva = localStorage.getItem("maiorDistancia")
   game.maiorDistancia = parseFloat( maiorDistanciaSalva ?? "0" )
-  tresD.clearRoad()
+  tresD.road.clear()
+
   game.carro = new Carro() // joga o carro velho fora e deixa o GC lidar com ele!
+  game.carro.obj = tresD.addObject("carro",{scale: 1.2, rotation: Math.PI*0.5})
+
   game.reset()
   game.firstSegment = game.road = new RoadSegment({
     center: [0,0],
@@ -161,47 +117,54 @@ function init_game(){
     width : 10,
     prev : undefined
   })
-  let parts = Array.from({length:6}, gerarTrecho)
+  let parts = Array.from({length:7}, gerarTrecho)
   let segment = game.road, i = 0
+
+  let segCaminhao = game.road
+
   while( parts.length > 0){
     i++
     segment = segment.continue( parts.pop() )
     if(i==2){
-      game.carro.position = vec2_mul( vec2_add( segment.startPoint,segment.clockwise?segment.startPointRight:segment.startPointLeft ), 0.5 )
+      segCaminhao = segment
+      game.carro.position = vec2.avg(
+        segment.startPoint,
+        segment.clockwise ? segment.startPointRight : segment.startPointLeft
+      )
+
       game.carro.heading = (segment.from + (segment.clockwise ? 0.5 : -0.5)) * Math.PI
     }
     // o quarto pedacinho é o que vai fazer a estrada crescer
     // quando a gente chegar nele.
     if(i==4)
       game.targetSegment=segment
-    tresD.addRoadSegment( segment )
+    tresD.road.addSegment( segment )
   }
   game.lastSegment = segment
-  tresD.posicionarFimDaLinha(...segment.startPoint,segment.startOrientation)
-  tresD.posicionarArco(...game.targetSegment.endPoint,game.targetSegment.endOrientation)
-  game.camera.setPos( game.carro.position )  
+
+  tresD.road.posicionarFimDaLinha(...segment.startPoint,segment.startOrientation)
+  tresD.road.posicionarArco(...game.targetSegment.endPoint,game.targetSegment.endOrientation)
+
+  tresD.lookAt( game.carro.position[0], 0, game.carro.position[1] )
+
+
+  // arrente vai ponha um caminhão!
+  const caminhaoPos = vec2.avg(
+    segCaminhao.endPoint,
+    segCaminhao.clockwise ? segCaminhao.endPointLeft : segCaminhao.endPointRight
+  )
+
+  game.caminhao = new CarroZumbi(game.targetSegment)
+  game.caminhao.velocidade = 0.4
+  game.caminhao.side = -1
+
+  game.caminhao.obj = tresD.addObject('caminhao',{scale:1.2, rotation: Math.PI*0.5})
+
   sfx.engine.on()
 }
 
-const keyboard = {
-  w : 0,
-  a : 0,
-  s : 0,
-  d : 0,
-  r : 0,
-  m : 0,
-  _holding : {},
-  /**
-   * @param {string} key
-   */
-  hit(key){
-    if(this[key] && !this._holding[key]){
-      return this._holding[key] = true
-    }
-    this._holding[key] = this[key]
-    return false
-  }
-}
+
+
 
 /**
  * @param {number} score
@@ -262,14 +225,14 @@ function tentarDenovo(){
   h.touch_controls.style.display="block"
   hide(h.leaderboard)
   hide(h.try_again)
-  tresD.resetarCarro()
+  tresD.reset()
   init_game()  
 }
 
 function tick(){
   game.frames++
   const ctx = game.ctx
-  const {camera,carro, targetSegment} = game
+  const {camera,carro, targetSegment, keyboard} = game
   const {screenWidth,screenHeight} = camera
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
 
@@ -277,17 +240,63 @@ function tick(){
     tentarDenovo()
 
   // game.road.draw(ctx, game.camera)
-  game_step(game,keyboard,sfx,mandarHighScore)
+  game_step(game,sfx,mandarHighScore)
 
   // renderização...
-  tresD.posicionarCarro(carro)
-  tresD.setZoom(camera.zoom)
+
+  tresD.posicionarCarro(carro, carro.obj )
+
+  // botar o caminhão no final da rua
+
+  game.caminhao.update(0.016)
+
+  if(game.caminhao.rua.removed){
+    game.caminhao.rua = game.lastSegment
+    game.caminhao.percurso = game.lastSegment.length/2
+  }
+
+  game.caminhao.obj.setPos(
+    game.caminhao.position[0],
+    0,
+    game.caminhao.position[1]
+  ).setRot(
+    0,
+    (game.caminhao.orientation-game.caminhao.side) * Math.PI,
+    0
+  )
+
+  // if(game.caminhaoSegment && game.caminhaoSegment.prev == null){
+  //   game.caminhaoSegment = game.lastSegment
+
+  //   const caminhaoSegment = game.caminhaoSegment
+
+  //   // arrente vai ponha um caminhão!
+  //   const caminhaoPos = vec2.avg(
+  //     caminhaoSegment.endPoint,
+  //     caminhaoSegment.clockwise ? caminhaoSegment.endPointLeft : caminhaoSegment.endPointRight
+  //   )
+
+  //   game.caminhao.setPos(caminhaoPos[0], 0, caminhaoPos[1])
+  //   game.caminhao.setRot(
+  //     0,
+  //     -caminhaoSegment.endOrientation
+  //     ,0)
+  // }
+
+  // carro.obj.setPos( carro.position[0], 0, carro.position[1] )
+  // carro.obj.setRot( 0, -carro.heading, 0)
+
+  tresD.setZoom(
+    (-carro.absVel / 80 )*10 + 10
+  )
+  let {x,y,z} = carro.obj.root.position
+  tresD.lookAt(x,y,z)
   tresD.render()
 
   if(!game.carroExplodiu){  
     if(game.valendo){
       if(game.distToTarget > 20){
-        let angulo =  vec2_angle( vec2_sub( targetSegment.endPoint, carro.position ) )
+        let angulo =  vec2.angle( vec2.sub( targetSegment.endPoint, carro.position ) )
         ui.indicadorPalhaco(ctx,screenWidth*0.5,screenHeight*0.5,angulo) 
       }  
     }
@@ -436,8 +445,8 @@ function initInput(){
     document.ontouchstart=undefined
   }
 
-  document.onkeydown = ({key}) => keyboard[ key ] = 1
-  document.onkeyup = ({key}) => keyboard[ key ] = 0
+  document.onkeydown = ({key}) => game.keyboard[ key ] = 1
+  document.onkeyup = ({key}) => game.keyboard[ key ] = 0
 
   // controles de toque/botão
   h.btn_try_again.onclick = function(){
@@ -457,11 +466,11 @@ function initInput(){
     const key = elemento.getAttribute("data-kb")
     elemento.ontouchstart = function(){
       elemento.classList.add("touch-down")
-      keyboard[key]=1
+      game.keyboard[key]=1
     }
     elemento.ontouchend = function(){
       elemento.classList.remove("touch-down")
-      keyboard[key]=0
+      game.keyboard[key]=0
     }
   })
 }

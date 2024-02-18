@@ -10,75 +10,12 @@ export function dist2d(a,b){
     return Math.sqrt( dX*dX + dY*dY )
 }
 
-/**
- * faz v1 - v2
- * @param {number[]} v1 
- * @param {number[]} v2 
- * @returns 
- */
-export function vec2_sub( v1, v2 ){
-    return [
-        v1[0] - v2[0],
-        v1[1] - v2[1]
-    ]
-}
-
-/**
- * escala um vetor
- * @param {number[]} v1 
- * @param {number} m 
- * @returns 
- */
-export function vec2_mul( v1, m ){
-    return [
-        v1[0] *m,
-        v1[1] *m
-    ]
-}
-
-
-/**
- * faz v1 + v2
- * @param {number[]} v1 
- * @param {number[]} v2 
- * @returns 
- */
-export function vec2_add( v1, v2 ){
-    return [
-        v1[0] + v2[0],
-        v1[1] + v2[1]
-    ]
-}
-
-
-/**
- * Dá o angulo (em radianos) que corresponde ao sentido de um vetor.
- * @param {number[]} v 
- * @returns 
- */
-export function vec2_angle( v ){
-    return Math.atan2( v[1], v[0] )
-}
-
 export function clamp(x,min,max){
     if(x < min)
         return min
     if(x > max)
         return max
     return x
-}
-
-/**
- * Recebe um vetor e dá o comprimento dele.
- * @param {number[]} vec 
- * @returns comprimento do vetor
- */
-export function vec2_len(vec){
-    return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1])
-}
-
-export function vec2_dp(v1,v2){
-    return v1[0]*v2[0] + v1[1]*v2[1]
 }
 
 export function sequencia(chave){

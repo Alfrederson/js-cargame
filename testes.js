@@ -2,9 +2,11 @@
 
 import { RoadSegment } from "./coisas/RoadSegment"
 import { Camera } from "./coisas/Camera"
-import { vec2_add, vec2_mul, vec2_sub } from "./coisas/util"
+import * as vec2 from "./coisas/vec2"
+
 import { Carro } from "./coisas/Carro"
 import { colidem } from "./coisas/Collision"
+import { CarroZumbi } from "./coisas/CarroZumbi"
 
 const point = [300,300]
 const cam = new Camera(600,600)
@@ -14,14 +16,6 @@ const keyboard = {}
 const carro = new Carro()
 carro.position = [300,340]
 
-const rua = new RoadSegment({
-    center: [290,290],
-    from: 0.6,
-    to: -0.4,
-    radius: 50,
-    width: 12,
-    prev: null
-})
 
 function controlarCarro(c){
     c.input.throttle = keyboard.KeyW ? 1 : 0
@@ -114,8 +108,8 @@ const carrosColidem = {
             //carroA.gasolina=0
             let vel = carroA.velocity
             // carroA.position = vec2_sub(carroA.position, saida.mtv)
-            carroA.velocity = vec2_mul(vel,-0.5)      
-            carroB.velocity = vec2_add(carroB.velocity, vec2_mul(vel,0.5))
+            carroA.velocity = vec2.mul(vel,-0.5)      
+            carroB.velocity = vec2.add(carroB.velocity, vec2.mul(vel,0.5))
         }
 
         ctx.fillText(carroA.gasolina,30,30)
@@ -123,6 +117,77 @@ const carrosColidem = {
 
 }
 
+
+const trafego = {
+    setup(){
+        this.cam = new Camera(600,600)
+        this.cam.zoom = 4
+        
+        this.rua = new RoadSegment({
+            center: [290,290],
+            from: 0.6,
+            to: -0.5 + Math.random(),
+            radius: 50,
+            width: 12,
+            prev : null
+        })
+        this.rua.continue({
+            radius : 40,
+            to : -0.5 + Math.random()
+        }).continue({
+            radius: 20,
+            to: -0.5 + Math.random()
+        }).continue({
+            radius: 20,
+            to: -0.5 + Math.random()
+        }).continue({
+            radius: 20,
+            to: -0.5 + Math.random()
+        })
+        .continue({
+            radius: 20,
+            to: -0.5 + Math.random()
+        })
+        .continue({
+            radius: 20,
+            to: -0.5 + Math.random()
+        })
+
+        // média dos pontos...
+        let segment = this.rua
+        let x = 0
+        let y = 0
+        let n = 0
+        while(segment){
+            x += segment.center[0];
+            y += segment.center[1];
+            n++
+            segment = segment.next
+        }
+
+        this.target = [x/n,y/n]
+        
+
+        this.caminhao = new CarroZumbi(this.rua)
+        this.outroCarro = new CarroZumbi(this.rua)
+        this.outroCarro.side *= -1
+        this.outroCarro.velocidade *= -1
+        this.outroCarro.percurso = Math.random() * this.rua.length
+    },
+
+    teste(ctx){
+        const {cam,rua,caminhao, outroCarro} = this
+
+        caminhao.update(0.016)
+        outroCarro.update(0.016)
+
+        this.cam.lookAt(this.target)
+        rua.draw(ctx, cam)
+        outroCarro.draw(ctx,cam)
+        caminhao.draw(ctx,cam)
+
+    }
+}
 
 
 document.addEventListener("DOMContentLoaded", function(){
@@ -139,7 +204,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     let ctx = canvas.getContext("2d")
 
-    const test = carrosColidem
+    const test = trafego
 
     test.setup()
 
