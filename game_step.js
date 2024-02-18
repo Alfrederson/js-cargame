@@ -128,7 +128,6 @@ export function game_step(game,sfx,mandarHighScore){
         }else
           game.framesParado = 0
 
-        game.framesParado=0
         // A pessoa tem 120 frames pra ficar parada.
         if(game.framesParado > 60*GAME_TEMPO_MAXIMO_PARADO)
           gameOver()

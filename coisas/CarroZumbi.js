@@ -30,7 +30,6 @@ export class CarroZumbi {
      */
     constructor(rua){
         this.rua = rua
-
         this.position = this.rua.startPoint
     }
 
@@ -50,50 +49,25 @@ export class CarroZumbi {
      * @param {number} dt - delta time. a gente vai usar no futuro pra fazer o movimento ser independente de framerate... 
      */
     update(dt){
+        if(!this.rua)
+            return
         this.percurso += this.velocidade
-
-        if(this.rua){
-            const {position,rotation,segment,nextPos} = this.rua.evalPoint(this.percurso, this.side)
-            this.position = position
-            this.orientation = rotation
-            if(this.rua !== segment){
-                if(segment){
-                    this.percurso = nextPos
-                    this.rua = segment                    
-                }else{
-                    console.log("voltando!")
-                    this.velocidade*=-1
-                    this.side *= -1
-                }
+        const {position,rotation,segment,nextPos} = this.rua.evalPoint(this.percurso, this.side)
+        this.position = position
+        this.orientation = rotation
+        if(this.rua !== segment){
+            if(segment){
+                this.percurso = nextPos
+                this.rua = segment                    
+            }else{
+                this.velocidade*=-1
+                this.side *= -1
             }
-            if(!this.rua){
-                console.log("saí da pista.")
-            }    
         }
     }
 
 
     draw(ctx, camera){
-
-        // const cfg = this.config
-        // ctx.save()
-
-        // // @ts-ignore
-        // ctx.translate( ...camera.translate(this.position) )
-        // ctx.rotate( this.heading )
-
-        // ctx.fillStyle="pink"
-
-        // ctx.scale(camera.zoom,camera.zoom)
-
-        // ctx.fillRect(
-        //     -cfg.cgToRear,
-        //     -cfg.halfWidth,
-        //     cfg.cgToFront + cfg.cgToRear,
-        //     cfg.halfWidth * 2
-        // )
-        // ctx.restore()
-        
         ctx.save()
 
         ctx.translate( ...camera.translate(this.position) )

@@ -483,6 +483,8 @@ export function reset(){
         o.remove()
     }
     cena.objects = []
+    
+    cena.state.drifting = false
 }
 
 export const fx = {
@@ -593,6 +595,11 @@ export const road = {
 }
 
 // faz exatamente o que parece.
+/**
+ * @param {number[]} point
+ * @param {number} width
+ * @param {number} height
+ */
 export function projetar([x,y], width,height){
     const ponto = new Vector3(x,0,y)
     const projetado = ponto.project( cena.camera )

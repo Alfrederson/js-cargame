@@ -65,8 +65,8 @@ const h = {
 
 // nota: esse módulo não é público!!!!!!!!
 // usar o dummy abaixo para rodar o jogo localmente.
-// import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
-import * as leaderboard from "./coisas/LeaderboardDummy.js"
+import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
+// import * as leaderboard from "./coisas/LeaderboardDummy.js"
 import {
   LEADERBOARD_API_KEY,
   LEADERBOARD_URL,
