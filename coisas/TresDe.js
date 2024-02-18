@@ -259,8 +259,17 @@ export class GameObject {
  * @param {string} modelName 
  * @returns {GameObject}
  */
-export function addObject(modelName, {scale, rotation}){
+export function addObject(modelName, {scale=1, rotation=Math.PI*0.5, width, depth}){
     const obj = new GameObject()
+
+    // bounding box
+    // if(width && depth){
+    //     const boxGeom = new BoxGeometry(depth,1.2,width)
+    //     const boxMesh = new Mesh(boxGeom, new MeshBasicMaterial({color: 0xFF0000, wireframe: true}))
+    //     boxMesh.position.y = 0.6
+    
+    //     obj.root.add(boxMesh)    
+    // }
 
     // pega um mesh...
     const existing = meshMap.get(modelName)

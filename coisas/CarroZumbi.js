@@ -21,6 +21,9 @@ export class CarroZumbi {
     velocidade = -0.25
     percurso = 0
 
+    colBoxWidth = 1.1
+    colBoxDepth = 2.5
+
     /** @type {RoadSegment} */
     rua
 
@@ -38,8 +41,8 @@ export class CarroZumbi {
         return [{
             type : collision.RECT,
             position : this.position,
-            width : 1.4,
-            depth : 2.5,
+            width : this.colBoxWidth,
+            depth : this.colBoxDepth,
             angle : this.orientation,
         }]
     }

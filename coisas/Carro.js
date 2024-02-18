@@ -104,6 +104,9 @@ class Carro {
     steer = 0      // posição do volante
     steerAngle = 0 // angulo da roda
 
+    colBoxWidth = 0.9
+    colBoxDepth = 1.88
+
     input = new CarroControles() // acho que são os controles
 
     smoothSteer = true
@@ -123,8 +126,8 @@ class Carro {
         return [{
             type : collision.RECT,
             position : this.position,
-            width : this.config.halfWidth*2,
-            depth : this.config.cgToFront + this.config.cgToRear,
+            width : this.colBoxWidth, //this.config.halfWidth*2,
+            depth : this.colBoxDepth, //this.config.cgToFront + this.config.cgToRear,
             angle : this.heading,
         }]
     }

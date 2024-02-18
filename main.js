@@ -106,7 +106,7 @@ function init_game(){
   tresD.road.clear()
 
   game.carro = new Carro() // joga o carro velho fora e deixa o GC lidar com ele!
-  game.carro.obj = tresD.addObject("carro",{scale: 1.2, rotation: Math.PI*0.5})
+  game.carro.obj = tresD.addObject("carro",{width: game.carro.colBoxWidth, depth: game.carro.colBoxDepth})
 
   game.reset()
   game.firstSegment = game.road = new RoadSegment({
@@ -114,7 +114,7 @@ function init_game(){
     radius: 30,
     from  : 0,
     to    : -0.2,
-    width : 10,
+    width : 8.5,
     prev : undefined
   })
   let parts = Array.from({length:7}, gerarTrecho)
@@ -148,18 +148,13 @@ function init_game(){
   tresD.lookAt( game.carro.position[0], 0, game.carro.position[1] )
 
 
-  // arrente vai ponha um caminhão!
-  const caminhaoPos = vec2.avg(
-    segCaminhao.endPoint,
-    segCaminhao.clockwise ? segCaminhao.endPointLeft : segCaminhao.endPointRight
-  )
-
   game.caminhao = new CarroZumbi(game.targetSegment)
   game.caminhao.velocidade = 0.4
   game.caminhao.side = -1
 
-  game.caminhao.obj = tresD.addObject('caminhao',{scale:1.2, rotation: Math.PI*0.5})
+  game.caminhao.obj = tresD.addObject('caminhao',{width: game.caminhao.colBoxWidth, depth:game.caminhao.colBoxDepth})
 
+  sfx.skid.stop()
   sfx.engine.on()
 }
 
@@ -287,7 +282,7 @@ function tick(){
   // carro.obj.setRot( 0, -carro.heading, 0)
 
   tresD.setZoom(
-    (-carro.absVel / 80 )*10 + 10
+    (-carro.absVel / 80 )*11 + 11
   )
   let {x,y,z} = carro.obj.root.position
   tresD.lookAt(x,y,z)
