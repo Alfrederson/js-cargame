@@ -40,6 +40,7 @@ class Shape{
  * @property {number} width
  * @property {number} depth
  * @property {number} angle
+ * @property {number} diagonal
 */
 
 /**
@@ -102,6 +103,27 @@ function rect_axes(cos,sin){
     ]
 }
 
+function aabb(pontos){
+    let min_x = pontos[0][0]
+    let max_x = pontos[0][0]
+
+    let min_y = pontos[0][1]
+    let max_y = pontos[0][1]
+    
+    for(let i = 0;i < pontos.length;i++){
+        if(pontos[i][0] < min_x)
+            min_x = pontos[i][0]
+        if(pontos[i][0] > max_x)
+            max_x = pontos[i][0]
+        if(pontos[i][1] < min_y)
+            min_y = pontos[i][1]
+        if(pontos[i][1] > max_y)
+            max_y = pontos[i][1]
+    }
+    
+    return [min_x,max_x,min_y,max_y]
+}
+
 /**
  * @param {Retangulo} a 
  * @param {Retangulo} b 
@@ -110,21 +132,31 @@ function retangulo_retangulo(a,b, output){
     // x_cos e x_sin também são os eixos dos dois retangulos.
     const [a_cos,a_sin] = [Math.cos(a.angle), Math.sin(a.angle)]
     const [b_cos,b_sin] = [Math.cos(b.angle), Math.sin(b.angle)]
-
     const corners_a = rect_corners(a, a_cos, a_sin)
     const corners_b = rect_corners(b, b_cos, b_sin)
-
+    const aabb_a = aabb(corners_a)
+    const aabb_b = aabb(corners_b)
+    // minimo x > maximo x ou
+    // maximo x < minimo x ou
+    // mesma coisa y
+    if(
+        (aabb_a[0] > aabb_b[1]) || // minimo do a > maximo do b
+        (aabb_a[1] < aabb_b[0]) || // maximo do a < minimo do b
+        (aabb_a[2] > aabb_b[3]) || // minimo do a > maximo do b
+        (aabb_a[3] < aabb_b[2])    // maximo do a < minimo do b
+    ){
+        return false
+    }
     const axes_a = rect_axes(a_cos, a_sin)
     const axes_b = rect_axes(b_cos, b_sin)
-
-    const axes = [...axes_a, ...axes_b]
+    //const axes = [...axes_a, ...axes_b]
 
     let minimumOverlap = Number.MAX_VALUE
     let smallestAxis = -1
 
     // são 4 eixos.
     for(let i = 0; i < 4; i++){
-        let axis = axes[i]
+        let axis = i < 2 ? axes_a[i] : axes_b[i-2]
         let min1 = Number.MAX_VALUE;
         let max1 = -Number.MAX_VALUE;
         let min2 = Number.MAX_VALUE;
@@ -138,20 +170,15 @@ function retangulo_retangulo(a,b, output){
             min2 = Math.min(min2,dot)
             max2 = Math.max(max2,dot)
         }
-        if(max1 < min2 || max2 < min1){
+        if(max1 < min2 || max2 < min1)
             return false
-        }else{
-            let overlap = Math.min(max1,max2) - Math.max(min1, min2)
-            if(overlap < minimumOverlap){
-                minimumOverlap = overlap
-                smallestAxis = i
-            }
+        let overlap = Math.min(max1,max2) - Math.max(min1, min2)
+        if(overlap < minimumOverlap){
+            minimumOverlap = overlap
+            smallestAxis = i
         }
     }
-
-    output.debug = "1 x 1"
-
-    output.mtv = vec2.mul( axes[smallestAxis], minimumOverlap )
+    output.mtv = vec2.mul( smallestAxis < 2 ? axes_a[smallestAxis] : axes_b[smallestAxis-2], minimumOverlap )
     return true
 }
 

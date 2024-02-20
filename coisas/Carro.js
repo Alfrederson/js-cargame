@@ -216,6 +216,9 @@ class Carro {
     }
 
 
+    /**
+     * @param {number} amount
+     */
     refuel(amount){
         this.gasolina += amount
         if(this.gasolina>= GAME_GASOLINA_INICIAL){

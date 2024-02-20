@@ -164,10 +164,8 @@ const trafego = {
             n++
             segment = segment.next
         }
-
         this.target = [x/n,y/n]
         
-
         this.caminhao = new CarroZumbi(this.rua)
         this.outroCarro = new CarroZumbi(this.rua)
         this.outroCarro.side *= -1
@@ -177,15 +175,12 @@ const trafego = {
 
     teste(ctx){
         const {cam,rua,caminhao, outroCarro} = this
-
         caminhao.update(0.016)
         outroCarro.update(0.016)
-
         this.cam.lookAt(this.target)
         rua.draw(ctx, cam)
         outroCarro.draw(ctx,cam)
         caminhao.draw(ctx,cam)
-
     }
 }
 

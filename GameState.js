@@ -42,6 +42,10 @@ export class GameState {
     velocidadeAlvo = 3
     distancia = 0
     maiorDistancia = 0
+
+    ladoDoAcidente = 0
+
+    ended=false
   
     // isso é pro placar.
     identidade = {}
@@ -50,8 +54,18 @@ export class GameState {
 
     /** @type { CarroZumbi } */
     caminhao
+
+
+    /** @type { CarroZumbi[] } */
+    trafego = []
+
     
+
+    /** @type {import("./GameState").GameEventHandler} */
+    onInit = undefined
+
     reset(){
+      this.ladoDoAcidente = 0
       this.velocidadeAlvo = 3
       this.distancia = 0
       this.valendo = false
@@ -63,5 +77,23 @@ export class GameState {
       this.driftHysteresis=0,
       this.driftLength=0,
       this.camera.zoom = 10
+
+      if(this.onInit){
+        this.onInit(this)
+      }
+    }
+
+
+    /** @type {import("./GameState").GameEventHandler} */
+    onGameOver = undefined
+
+    gameOver(){
+      if(this.carroExplodiu)
+        return
+      
+      this.carroExplodiu=true
+
+      if(this.onGameOver)
+        this.onGameOver(this)
     }
 }

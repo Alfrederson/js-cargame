@@ -4,29 +4,17 @@ import * as tresD from "./coisas/TresDe"
 import { GAME_TEMPO_MAXIMO_PARADO } from "./config"
 import { GameState } from "./GameState"
 
-import * as collision from "./coisas/Collision"
-import * as vec2 from "./coisas/vec2"
+import { sfx } from "./sfx"
+import { trafego } from "./trafego"
+
 
 /**
  * 
  * @param {GameState} game 
- * @param {any} sfx 
  * @param {any} mandarHighScore 
  */
-export function game_step(game,sfx,mandarHighScore){
+export function game_step(game,mandarHighScore){
     const {keyboard, camera, carro, road, targetSegment} = game
-
-    function gameOver(){
-      sfx.engine.off()
-      sfx.skid.stop()
-      sfx.bomb.play()
-      tresD.fx.explosao(carro.position[0],0,carro.position[1])
-      game.carroExplodiu=true
-
-      // fica engraçado assim.
-      carro.obj.setColor(0,0,0)
-      setTimeout( mandarHighScore, 300)     
-    }    
   
     carro.input.left = keyboard.a
     carro.input.right = keyboard.d
@@ -82,9 +70,7 @@ export function game_step(game,sfx,mandarHighScore){
 
       // tira um do começo
       game.road = game.road.next
-      
-      if(game.road.prev)
-        game.road.prev.remove()
+      game.road.prev.remove()
       
       // remove o último elo definitivamente
       // (isso vai fazer os caminhões ultrapassados aparecerem lá no começo)
@@ -97,6 +83,7 @@ export function game_step(game,sfx,mandarHighScore){
 
 
       // isso não vai ser mais desse jeito...
+      // ou vai?
       tresD.road.posicionarFimDaLinha(...game.lastSegment.startPoint,game.lastSegment.startOrientation)
       tresD.road.posicionarArco(...game.targetSegment.endPoint,game.targetSegment.endOrientation)    
 
@@ -130,25 +117,15 @@ export function game_step(game,sfx,mandarHighScore){
 
         // A pessoa tem 120 frames pra ficar parada.
         if(game.framesParado > 60*GAME_TEMPO_MAXIMO_PARADO)
-          gameOver()
+          game.gameOver()
 
         // contabiliza a velocidade.
         game.distancia += carro.absVel * 0.016
         if(game.velocidadeAlvo < 30)
-          game.velocidadeAlvo += carro.absVel * 0.0001  
-
-
-        // colide com o caminhão
-        const out = {}
-        if(collision.colidem(game.caminhao,game.carro,out)){
-          gameOver()
-          let cos = Math.cos(game.caminhao.orientation * Math.PI)
-          let sin = Math.sin(game.caminhao.orientation * Math.PI)
-          game.carro.velocity = vec2.add([cos*game.caminhao.velocidade*3,sin*game.caminhao.velocidade*3],vec2.mul(game.carro.velocity,-0.25))
-          game.carro.yawRate = 5
-          game.caminhao.velocidade = 0
-        }
-        
+          game.velocidadeAlvo += carro.absVel * 0.0001          
       }  
     }
+
+
+    trafego(game)
   }

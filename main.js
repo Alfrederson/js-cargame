@@ -4,7 +4,6 @@ import {
   SCREEN_WIDTH,
   SCREEN_HEIGHT,
   GAME_MAX_SPEED,
-  GAME_GASOLINA_INICIAL,
   GAME_TEMPO_MAXIMO_PARADO,
 } from "./config.js"
 
@@ -62,7 +61,6 @@ const h = {
   touch_controls: undefined
 }
 
-
 // nota: esse módulo não é público!!!!!!!!
 // usar o dummy abaixo para rodar o jogo localmente.
 import * as leaderboard from "./deixar_do_lado_de_fora/Leaderboard.js"
@@ -73,93 +71,21 @@ import {
   LEADERBOARD_GAME_ID
 } from "./leaderboard.config.js"
 
-import { RoadSegment } from "./coisas/RoadSegment.js"
-import { Carro } from "./coisas/Carro.js"
-
 import * as tresD from "./coisas/TresDe.js"
 import * as audio from "./coisas/Audio.js"
-
 import * as vec2 from "./coisas/vec2.js"
 
-import { show,hide, gerarTrecho, passo_a_passo, agora_ja, nunca } from "./coisas/util.js"
-import { game_step } from "./game_step.js"
-
 import { host } from "./coisas/AndroidHost.js"
+import { show,hide, passo_a_passo, agora_ja, nunca } from "./coisas/util.js"
 
+import { game_step } from "./game_step.js"
+import { game_init } from "./game_init.js"
 import { GameState } from "./GameState.js"
-import { CarroZumbi } from "./coisas/CarroZumbi.js"
+
+import { sfx } from "./sfx.js"
 
 const android = host()
-
 const game = new GameState()
-
-const sfx = {
-  engine : new audio.Engine(audio.context),
-  bomb : new audio.Clip(audio.context,"./sfx/honk.m4a"),
-  check : new audio.Clip(audio.context,"./sfx/checkpoint.ogg",0.06),
-  skid : new audio.Skid(audio.context)
-}
-
-function init_game(){
-  const maiorDistanciaSalva = localStorage.getItem("maiorDistancia")
-  game.maiorDistancia = parseFloat( maiorDistanciaSalva ?? "0" )
-  tresD.road.clear()
-
-  game.carro = new Carro() // joga o carro velho fora e deixa o GC lidar com ele!
-  game.carro.obj = tresD.addObject("carro",{width: game.carro.colBoxWidth, depth: game.carro.colBoxDepth})
-
-  game.reset()
-  game.firstSegment = game.road = new RoadSegment({
-    center: [0,0],
-    radius: 30,
-    from  : 0,
-    to    : -0.2,
-    width : 8.5,
-    prev : undefined
-  })
-  let parts = Array.from({length:7}, gerarTrecho)
-  let segment = game.road, i = 0
-
-  let segCaminhao = game.road
-
-  while( parts.length > 0){
-    i++
-    segment = segment.continue( parts.pop() )
-    if(i==2){
-      segCaminhao = segment
-      game.carro.position = vec2.avg(
-        segment.startPoint,
-        segment.clockwise ? segment.startPointRight : segment.startPointLeft
-      )
-
-      game.carro.heading = (segment.from + (segment.clockwise ? 0.5 : -0.5)) * Math.PI
-    }
-    // o quarto pedacinho é o que vai fazer a estrada crescer
-    // quando a gente chegar nele.
-    if(i==4)
-      game.targetSegment=segment
-    tresD.road.addSegment( segment )
-  }
-  game.lastSegment = segment
-
-  tresD.road.posicionarFimDaLinha(...segment.startPoint,segment.startOrientation)
-  tresD.road.posicionarArco(...game.targetSegment.endPoint,game.targetSegment.endOrientation)
-
-  tresD.lookAt( game.carro.position[0], 0, game.carro.position[1] )
-
-
-  game.caminhao = new CarroZumbi(game.targetSegment)
-  game.caminhao.velocidade = 0.4
-  game.caminhao.side = -1
-
-  game.caminhao.obj = tresD.addObject('caminhao',{width: game.caminhao.colBoxWidth, depth:game.caminhao.colBoxDepth})
-
-  sfx.skid.stop()
-  sfx.engine.on()
-}
-
-
-
 
 /**
  * @param {number} score
@@ -220,67 +146,19 @@ function tentarDenovo(){
   h.touch_controls.style.display="block"
   hide(h.leaderboard)
   hide(h.try_again)
-  tresD.reset()
-  init_game()  
+  game.reset()
 }
 
 function tick(){
   game.frames++
   const ctx = game.ctx
-  const {camera,carro, targetSegment, keyboard} = game
+  const {camera,carro, targetSegment} = game
   const {screenWidth,screenHeight} = camera
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
 
-  if(keyboard.hit("r"))
-    tentarDenovo()
-
-  // game.road.draw(ctx, game.camera)
-  game_step(game,sfx,mandarHighScore)
-
-  // renderização...
+  game_step(game)
 
   tresD.posicionarCarro(carro, carro.obj )
-
-  // botar o caminhão no final da rua
-
-  game.caminhao.update(0.016)
-
-  if(game.caminhao.rua.removed){
-    game.caminhao.rua = game.lastSegment
-    game.caminhao.percurso = game.lastSegment.length/2
-  }
-
-  game.caminhao.obj.setPos(
-    game.caminhao.position[0],
-    0,
-    game.caminhao.position[1]
-  ).setRot(
-    0,
-    (game.caminhao.orientation-game.caminhao.side) * Math.PI,
-    0
-  )
-
-  // if(game.caminhaoSegment && game.caminhaoSegment.prev == null){
-  //   game.caminhaoSegment = game.lastSegment
-
-  //   const caminhaoSegment = game.caminhaoSegment
-
-  //   // arrente vai ponha um caminhão!
-  //   const caminhaoPos = vec2.avg(
-  //     caminhaoSegment.endPoint,
-  //     caminhaoSegment.clockwise ? caminhaoSegment.endPointLeft : caminhaoSegment.endPointRight
-  //   )
-
-  //   game.caminhao.setPos(caminhaoPos[0], 0, caminhaoPos[1])
-  //   game.caminhao.setRot(
-  //     0,
-  //     -caminhaoSegment.endOrientation
-  //     ,0)
-  // }
-
-  // carro.obj.setPos( carro.position[0], 0, carro.position[1] )
-  // carro.obj.setRot( 0, -carro.heading, 0)
-
   tresD.setZoom(
     (-carro.absVel / 80 )*11 + 11
   )
@@ -329,19 +207,34 @@ function tick(){
 }
 
 
+/**
+ * @param {GameState} state 
+ */
+game.onGameOver = function(state){
+  sfx.engine.off()
+  sfx.skid.stop()
+  sfx.bomb.play()
+  tresD.fx.explosao(state.carro.position[0],0,state.carro.position[1])
+  game.carroExplodiu=true
+
+  // fica engraçado assim.
+  state.carro.obj.setColor(0,0,0)
+  setTimeout( mandarHighScore, 300)     
+}
+
+game.onInit = game_init
+
 // A gente tem que dar um jeito de deixar isso bonito no celular também.
 document.addEventListener("DOMContentLoaded", function (event) {
     document.querySelectorAll("[id]").forEach(elemento =>{
       let id = elemento.id
-      if(! h.hasOwnProperty(id)){
-        throw "elemento com id perdido: "+id
-      }
+      if(! h.hasOwnProperty(id))
+        console.warn("elemento com id perdido: "+id)
       h[id] = elemento
     })
     Object.entries(h).forEach( ([key,e]) =>{
-      if(!e){
+      if(!e)
         throw "elemento não encontrado "+key
-      }
     })
 
     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
@@ -413,8 +306,10 @@ document.addEventListener("DOMContentLoaded", function (event) {
               erro => console.log("não pude obter identidade porque: ", erro)
             ).finally( ()=>{
               hide( h.player_name )
+
               game.tutorial=false
-              init_game()
+              game.reset()
+
               proximo()
             })
           }          
@@ -424,7 +319,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
     fitCanvas()
     tresD.init(game.canvas)
-    init_game()
+    game.reset()
     
     tick()
 });

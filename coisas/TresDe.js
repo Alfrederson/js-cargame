@@ -22,8 +22,8 @@ import {
     NearestFilter,
     RepeatWrapping,
     PlaneGeometry,
-    InstancedMesh,
-    Material
+    Vector4,
+    Material,
 } from 'three'
 
 import {
@@ -199,8 +199,21 @@ let cena = {
 /** @type {GLTFLoader} */
 const loader = new GLTFLoader()
 
-const meshMap = new Map()
 
+/**
+ * @typedef {Object} DownloadedModel
+ * @property {boolean} [loading]
+ * @property {string} [modelName]
+ * @property {Mesh} [mesh]
+ * @property {Material} [material]
+ * @property {Array<function(DownloadedModel): void>} [queue]
+ * 
+*/
+
+/**
+ * @type {Map<string,DownloadedModel>}
+ */
+const meshMap = new Map()
 
 export class GameObject {
     /**
@@ -259,7 +272,7 @@ export class GameObject {
  * @param {string} modelName 
  * @returns {GameObject}
  */
-export function addObject(modelName, {scale=1, rotation=Math.PI*0.5, width, depth}){
+export function addObject(modelName, {scale=1, rotation=Math.PI*0.5, width=undefined, depth=undefined, recolor=false}){
     const obj = new GameObject()
 
     // bounding box
@@ -275,42 +288,70 @@ export function addObject(modelName, {scale=1, rotation=Math.PI*0.5, width, dept
     const existing = meshMap.get(modelName)
     if(!existing){
         // carrega.
-        console.log("carregando ",modelName)
+
+        const pendingMesh = {
+            modelName,
+            loading:true,
+            queue : [],
+            mesh : undefined
+        }
+
+        meshMap.set(modelName,pendingMesh)
+
         loader.load( `./${modelName}.gltf`, function({scene,scenes,cameras,animations,asset}){
-            console.log("carregado ",modelName)
+            console.log("carregado",modelName)
             scene.rotation.y = rotation
             scene.scale.set(scale,scale,scale)
-            let mat = scene.children[0].material
-            if(mat && mat.map){
-                pixelate(mat.map)
-            }else{
-                mat = new MeshStandardMaterial({color:0xFF00FF})
-                console.log("novo material rosa")
-            }
+            let material = scene.children[0].material
+            if(material && material.map)
+                pixelate(material.map)
+            else
+                material = new MeshStandardMaterial({color:0xFF00FF})
+            // essa não é a primeira vez que pediram esse modelo.
+            let existing = meshMap.get(modelName)
+            if(existing)
+                existing.queue.forEach(
+                    callback => callback({modelName, mesh:scene, material})
+                )
             meshMap.set(modelName,{
+                modelName,
                 mesh : scene,
-                material : mat
-            })
+                material,
+                loading: false,
+                queue: []
+            })            
             // clonba a cena...
             const copy = scene.clone()
-            const copyMat = mat.clone()
-
-            copy.children[0].material = copyMat
+            if(recolor){
+                const copyMat = material.clone()
+                copy.children[0].material = copyMat
+                obj.material = copyMat
+            }
+    
             obj.root.add(copy)
             obj.model = copy
-
-            obj.material = copyMat
         })
     }else{
-        const {mesh,material} = existing
-        const copy = mesh.clone()   
-        const copyMat = material.clone()
+        const useExisting = (/** @type{ DownloadedModel } */ existing) => {
+            const {mesh,material} = existing
+            const copy = mesh.clone()   
+    
+            if(recolor){
+                const copyMat = material.clone()
+                // @ts-ignore
+                copy.children[0].material = copyMat
+                // @ts-ignore
+                obj.material = copyMat            
+            }
+    
+            obj.root.add(copy)
+            obj.model = copy
+        }
 
-        copy.children[0].material = copyMat
-
-        obj.root.add(copy)
-        obj.model = copy
-        obj.material = copyMat        
+        if(existing.loading)
+            existing.queue.push(useExisting)
+        else
+            useExisting(existing)
     }
 
     cena.objects.push(obj)
@@ -376,21 +417,8 @@ export function init(element){
         1000
     )
 
-    // não estou usando isso aqui ainda por causa do base do vite.
-
-
-    // loader.load( "./carro.gltf", function({scene,scenes,cameras,animations,asset}){
-    //     scene.rotation.y = Math.PI*0.5
-    //     scene.scale.set(1.2,1.2,1.2)
-    //     let mat = scene.children[0].material
-    //     pixelate(mat.map)
-    //     cena.carroBody = scene
-    //     cena.carro.add(scene)
-    // })
-
     // texturas e etc.
     const textureLoader = new TextureLoader()
-
     textureLoader.load("./rua.png", textura =>{
         textura.wrapS = RepeatWrapping
         textura.wrapT = RepeatWrapping
@@ -420,14 +448,9 @@ export function init(element){
         paint(cena.mat.arco,textura)
     })    
 
-    cena.scene.add( cena.carro )
     cena.cameraRoot.add( cena.camera )
 
-
-
     cena.scene.add( cena.cameraRoot )
-
-    // cena.carro.add( cena.camera )
 
      cena.camera.position.z = 5
      cena.camera.position.y = 5
@@ -444,12 +467,7 @@ export function posicionarCarro( carro, obj ){
     const [x,y] = carro.position
     const angulo = carro.heading
 
-    obj.root.position.set(x,0,y)
-    obj.root.rotation.set(0, -angulo,0)
-
-    // cena.carro.position.set(x,0,y)
-    // if(cena.carroBody)
-    //     cena.carroBody.rotation.y = -angulo + Math.PI*0.5
+    obj.setPos(x,0,y).setRot(0,-angulo,0)
 
     if(cena.state.drifting){
         if( ++driftCounter == 2){
@@ -529,6 +547,7 @@ export function endDrifting(){
     return this
 }
 
+
 export function render(){
     cena.renderer.clear()
     // atualizar as explosões...
@@ -542,7 +561,13 @@ export function render(){
         }
     }
     cena.particulas = particulas
+
+
+    const vp = new Vector4()
+    cena.renderer.getViewport(vp)
+
     cena.renderer.render( cena.scene, cena.camera )
+
     return this
 }
 

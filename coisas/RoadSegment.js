@@ -452,7 +452,7 @@ class RoadSegment{
           x + cos * (this.radius + this.width * 0.25 * side * (this.clockwise ?1:-1)),
           y + sin * (this.radius + this.width * 0.25 * side * (this.clockwise ?1:-1))
         ],
-        rotation : this.clockwise ? -angle-0.5*side : -angle+0.5*side,
+        rotation : this.clockwise ? -angle-0.5* Math.sign(side) : -angle+0.5*Math.sign(side),
         segment : nextSegment,
         nextPos : nextPos
       }

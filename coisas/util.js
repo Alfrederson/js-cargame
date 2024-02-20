@@ -18,6 +18,11 @@ export function clamp(x,min,max){
     return x
 }
 
+export function pick_any(...list){
+    const index = list.length * Math.random()
+    return list[(index|0)%list.length]
+}
+
 export function sequencia(chave){
     return function(...passos){
         let promise
@@ -44,28 +49,9 @@ export function sequencia(chave){
     }
 }
 
-/**
- * Faz alguma coisa uma só vez.
- * @param {string} chave 
- * @param {function} callback 
- */
-export function fazer( chave ){
-    let ja_fez = localStorage.getItem(chave)
-    if(ja_fez == null){
-        return { uma_so_vez : sequencia(chave) }
-    }
-    // retorna uma coisa que faz um "senão."
-    return {
-        uma_so_vez : function(){
-            return { senao : callback => callback() }
-        }
-    }
-}
-
 export function nunca(oque){
     return localStorage.getItem(oque)==null
 }
-
 
 export function se_nunca(oque){
     if(localStorage.getItem(oque)==null){
@@ -98,7 +84,7 @@ export function passo( callback ){
 
 
 export function gerarTrecho(){
-    const comprimento = 10 + 15*Math.round( (1+Math.random()*9) )/10
+    const comprimento = 10 + Math.round( Math.random()*9 )
     const angulo = 0.3*Math.round( 1+Math.random()*99 )/100
     const radius = comprimento/angulo
     return {
